@@ -61,13 +61,20 @@ def obsFit(inFreq, outPng, outHdf5, num_of_l=3, n_rln=1000, method='FQ', tauhe=N
     '''
 #-----------------------------------------------------------------------------------------
 
-    # Load observed oscillation frequencies and second differences
+    # Load observed oscillation frequencies
     freq, num_of_mode, num_of_n, delta_nu = ld.loadFreq(inFreq, num_of_l)
-    num_of_dif2, freqDif2, icov = sg.compDif2(num_of_l, freq, num_of_mode, num_of_n)
     print ()
-    print ('Total number of modes and SDs = %d, %d' %(num_of_mode, num_of_dif2))
+    print ('Total number of modes = %d' %(num_of_mode))
     print ('Number of degrees for each l = ', num_of_n)
     print ('Large frequency separation = %.2f' %(delta_nu))
+
+
+    # Compute second differences (if being fitted)
+    num_of_dif2, freqDif2, icov = None, None, None
+    if method.lower() == 'sd': 
+        num_of_dif2, freqDif2, icov = sg.compDif2(num_of_l, freq, num_of_mode, num_of_n)
+        print ()
+        print ('Total number of SDs = %d' %(num_of_dif2))
     
     
     # Fit glitch signatures
@@ -127,8 +134,8 @@ def obsFit(inFreq, outPng, outHdf5, num_of_l=3, n_rln=1000, method='FQ', tauhe=N
         f.create_dataset('obs/freq', data=freq)
         f.create_dataset('obs/num_of_n', data=num_of_n)
         f.create_dataset('obs/delta_nu', data=delta_nu)
-        f.create_dataset('obs/freqDif2', data=freqDif2)
-        f.create_dataset('obs/icov', data=icov)
+        f.create_dataset('obs/freqDif2', dtype=float, data=freqDif2)
+        f.create_dataset('obs/icov', dtype=float, data=icov)
         f.create_dataset('fit/param', data=param)
         f.create_dataset('fit/chi2', data=chi2)
         f.create_dataset('fit/reg', data=reg)

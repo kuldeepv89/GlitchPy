@@ -6,10 +6,10 @@ import supportGlitch as sg
 
 
 
-path, star = '/Users/au572692/data/sebastien_hh1b/', 'gl_008_2_nm3_nse'
+path, star = 'test', ''
 filename = path + star + '/' + 'FQ3.0_fitSummary.hdf5'
 
-AheLower, tauczLower, tauczUpper = 0.001, 3200., 4600.
+AheLower, tauczLower, tauczUpper = 0.001, 2500., 3500.
 vmin, vmax = None, None
 
 
