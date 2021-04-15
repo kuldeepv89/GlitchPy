@@ -161,19 +161,20 @@ else:
     print ('Fitting method is not recognized. Terminating the run...')
     sys.exit(1)
 
-pathList = ['test']
+
+path, stars = './', ['16cyga']
 
 # End of parameter definition
 #-----------------------------------------------------------------------------------------
 
 
-for dataPath in pathList:
+for star in stars:
     print ()
-    print ('Fitting star in folder %s...' %(dataPath))
-    inFreq = dataPath + '/freq.txt'
+    print ('Fitting star in folder %s...' %(path + star))
+    inFreq = path + star + '/freq.txt'
     tolStr = str(round(abs(np.log10(tol_grad)), 1))
-    outPng = dataPath + '/' + method + tolStr + '_fitSummary.png'
-    outHdf5 = dataPath + '/' + method + tolStr + '_fitSummary.hdf5'
+    outPng = path + star + '/' + method + tolStr + '_fitSummary.png'
+    outHdf5 = path + star + '/' + method + tolStr + '_fitSummary.hdf5'
     _ = obsFit(inFreq, outPng, outHdf5, num_of_l=num_of_l, n_rln=n_rln, method=method, 
             tauhe=tauhe, dtauhe=dtauhe, taucz=taucz, dtaucz=dtaucz, 
             regu_param=regu_param, tol_grad=tol_grad, n_guess=n_guess)

@@ -6,7 +6,7 @@ import supportGlitch as sg
 
 
 
-path, star = 'test', ''
+path, star = './', '16cyga'
 filename = path + star + '/' + 'FQ3.0_fitSummary.hdf5'
 
 AheLower, tauczLower, tauczUpper = 0.001, 2500., 3500.
