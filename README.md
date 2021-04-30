@@ -3,4 +3,4 @@ This repository can be used to study the glitch signatures arising from the heli
 1. by fitting individual oscillation frequencies
 2. by fitting second differences of frequencies w.r.t. the radial order.  
 
-The above methods are described in Verma et al. (2019) in some detail.
+The above methods are described in Verma et al. (2019) in some detail (https://ui.adsabs.harvard.edu/abs/2019MNRAS.483.4678V/abstract).
