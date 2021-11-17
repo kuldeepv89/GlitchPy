@@ -4,8 +4,10 @@
 !     FREQUENCIES
 !     --------------------------------------------------------------------------
 !
-!     AUTHOR NAME   : KULDEEP VERMA
-!     EMAIL ADDRESS : kuldeep@phys.au.dk, kuldeepv89@gmail.com
+!     AUTHOR NAME     : KULDEEP VERMA
+!     EMAIL ADDRESSES : verma@ice.csic.es, kuldeep@phys.au.dk, 
+!                       kuldeepv89@gmail.com
+!     LAST MODIFIED   : 17/11/2021
 !
 !*******************************************************************************
 !

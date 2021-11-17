@@ -1,3 +1,6 @@
+'''
+Auxiliary functions for glitch fitting
+'''
 import numpy as np
 import sys
 from sd import sd
