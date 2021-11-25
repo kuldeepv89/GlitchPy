@@ -71,7 +71,7 @@ def fit(freq, num_of_n, delta_nu, num_of_dif2=None, freqDif2=None, icov=None, me
         Second differences (l, n, v(muHz), err(muHz), dif2(muHz), err(muHz))
         used only for method='SD'
     icov : array
-        Inverse covariance matrix for second differences(used only for method='SD')
+        Inverse covariance matrix for second differences
         used only for method='SD'
     method : str
         Fitting method ('FQ' or 'SD')
