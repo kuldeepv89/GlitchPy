@@ -31,20 +31,20 @@ def obsFit(inFreq, outPng, outHdf5, num_of_l=3, n_rln=1000, method='FQ', tauhe=N
         Fitting method ('FQ' or 'SD')
     tauhe : float, optional
         Determines the range in acoustic depth (s) of He glitch for global minimum 
-        search (tauhe - dtauhe, tauhe + dtauhe). If None, make a guess using acoustic 
-        radius
+        search (tauhe - dtauhe, tauhe + dtauhe). 
+        If tauhe = None, tauhe = 0.16 * acoustic_radius + 48 
     dtauhe : float, optional
         Determines the range in acoustic depth (s) of He glitch for global minimum 
-        search (tauhe - dtauhe, tauhe + dtauhe). If None, make a guess using acoustic 
-        radius
+        search (tauhe - dtauhe, tauhe + dtauhe). 
+        If dtauhe = None, dtauhe = 0.05 * acoustic_radius
     taucz : float, optional
         Determines the range in acoustic depth (s) of CZ glitch for global minimum 
-        search (taucz - dtaucz, taucz + dtaucz). If None, make a guess using acoustic 
-        radius
+        search (taucz - dtaucz, taucz + dtaucz). 
+        If taucz = None, taucz = 0.37 * acoustic_radius + 900
     dtaucz : float, optional
         Determines the range in acoustic depth (s) of CZ glitch for global minimum 
-        search (taucz - dtaucz, taucz + dtaucz). If None, make a guess using acoustic 
-        radius
+        search (taucz - dtaucz, taucz + dtaucz). 
+        If dtaucz = None, dtaucz = 0.10 * acoustic_radius
     regu_param : float
         Regularization parameter (7 and 1000 generally work well for 'FQ' and 
         'SD', respectively)
@@ -148,10 +148,9 @@ def obsFit(inFreq, outPng, outHdf5, num_of_l=3, n_rln=1000, method='FQ', tauhe=N
 #-----------------------------------------------------------------------------------------
 # Main program 
 #-----------------------------------------------------------------------------------------
-num_of_l, n_rln, n_guess, tol_grad, method = 3, 1000, 200, 1.e-3, 'FQ'
+num_of_l, n_rln, n_guess, tol_grad, method = 3, 1000, 200, 1.e-3, 'SD'
 
-tauhe, dtauhe = None, None
-taucz, dtaucz = None, None
+tauhe, dtauhe, taucz, dtaucz = None, None, None, None
 
 if method.lower() == 'fq':
     regu_param = 7.e0
@@ -161,8 +160,8 @@ else:
     print ('Fitting method is not recognized. Terminating the run...')
     sys.exit(1)
 
-
 path, stars = './', ['16cyga']
+
 
 # End of parameter definition
 #-----------------------------------------------------------------------------------------

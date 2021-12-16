@@ -87,20 +87,20 @@ def fit(freq, num_of_n, delta_nu, num_of_dif2=None, freqDif2=None, icov=None, me
         Number of initial guesses in search for the global minimum
     tauhe : float, optional
         Determines the range in acoustic depth (s) of He glitch for global minimum 
-        search (tauhe - dtauhe, tauhe + dtauhe). If None, make a guess using acoustic 
-        radius
+        search (tauhe - dtauhe, tauhe + dtauhe). 
+        If tauhe = None, tauhe = 0.16 * acousticRadius + 48 
     dtauhe : float, optional
         Determines the range in acoustic depth (s) of He glitch for global minimum 
-        search (tauhe - dtauhe, tauhe + dtauhe). If None, make a guess using acoustic 
-        radius
+        search (tauhe - dtauhe, tauhe + dtauhe). 
+        If dtauhe = None, dtauhe = 0.05 * acousticRadius
     taucz : float, optional
         Determines the range in acoustic depth (s) of CZ glitch for global minimum 
-        search (taucz - dtaucz, taucz + dtaucz). If None, make a guess using acoustic 
-        radius
+        search (taucz - dtaucz, taucz + dtaucz). 
+        If taucz = None, taucz = 0.37 * acousticRadius + 900
     dtaucz : float, optional
         Determines the range in acoustic depth (s) of CZ glitch for global minimum 
-        search (taucz - dtaucz, taucz + dtaucz). If None, make a guess using acoustic 
-        radius
+        search (taucz - dtaucz, taucz + dtaucz). 
+        If dtaucz = None, dtaucz = 0.10 * acousticRadius
 
     Return
     ------
@@ -115,14 +115,16 @@ def fit(freq, num_of_n, delta_nu, num_of_dif2=None, freqDif2=None, icov=None, me
     '''
 #-----------------------------------------------------------------------------------------
 
+    # Initialize acoutic depths (if they are None)
+    acousticRadius = 5.e5 / delta_nu
     if tauhe is None:
-        tauhe = -1.
+        tauhe = 0.16 * acousticRadius + 48.
     if dtauhe is None:
-        dtauhe = -1.
+        dtauhe = 0.05 * acousticRadius
     if taucz is None:
-        taucz = -1.
+        taucz = 0.37 * acousticRadius + 900.
     if dtaucz is None:
-        dtaucz = -1.
+        dtaucz = 0.10 * acousticRadius    
 
     np.random.seed(1)
 
@@ -138,9 +140,9 @@ def fit(freq, num_of_n, delta_nu, num_of_dif2=None, freqDif2=None, icov=None, me
         print ('Fitting oscillation frequencies...')
 
         # Original
-        tmp, chi2[-1], reg[-1], ier[-1] = fit_fq(freq, num_of_n, delta_nu, 
-            tol_grad_fq=tol_grad, regu_param_fq=regu_param, num_guess=n_guess, 
-            tauhe=tauhe, dtauhe=dtauhe, taucz=taucz, dtaucz=dtaucz)
+        tmp, chi2[-1], reg[-1], ier[-1] = fit_fq(freq, num_of_n, acousticRadius, 
+            tauhe, dtauhe, taucz, dtaucz, tol_grad_fq=tol_grad, 
+            regu_param_fq=regu_param, num_guess=n_guess) 
         param = np.zeros((n_rln+1, len(tmp)), dtype=float)
         param[-1, :] = tmp
         Acz, Ahe = averageAmplitudes(param[-1, :], vmin, vmax, delta_nu=delta_nu, 
@@ -154,9 +156,8 @@ def fit(freq, num_of_n, delta_nu, num_of_dif2=None, freqDif2=None, icov=None, me
             for i in range(n_rln):
                 freq_rln[:, 2] = np.random.normal(loc=freq[:, 2], scale=freq[:, 3])
                 param[i, :], chi2[i], reg[i], ier[i] = fit_fq(freq_rln, num_of_n, 
-                    delta_nu, tol_grad_fq=tol_grad, regu_param_fq=regu_param, 
-                    num_guess=n_guess, tauhe=tauhe, dtauhe=dtauhe, taucz=taucz, 
-                    dtaucz=dtaucz)
+                    acousticRadius, tauhe, dtauhe, taucz, dtaucz, 
+                    tol_grad_fq=tol_grad, regu_param_fq=regu_param, num_guess=n_guess)
                 Acz, Ahe = averageAmplitudes(param[i, :], vmin, vmax, delta_nu=delta_nu, 
                     method=method)
                 print ('N_rln  Ier  Chi2  Reg  Acz  Tcz  Ahe  The = %5d %5d %12.4f %8.4f '
@@ -172,9 +173,9 @@ def fit(freq, num_of_n, delta_nu, num_of_dif2=None, freqDif2=None, icov=None, me
             sys.exit(1)
 
         # Original
-        tmp, chi2[-1], reg[-1], ier[-1] = fit_sd(freqDif2, icov, delta_nu, 
-            tol_grad_sd=tol_grad, regu_param_sd=regu_param, num_guess=n_guess, 
-                tauhe=tauhe, dtauhe=dtauhe, taucz=taucz, dtaucz=dtaucz)
+        tmp, chi2[-1], reg[-1], ier[-1] = fit_sd(freqDif2, icov, acousticRadius, 
+            tauhe, dtauhe, taucz, dtaucz, tol_grad_sd=tol_grad, 
+            regu_param_sd=regu_param, num_guess=n_guess) 
         param = np.zeros((n_rln+1, len(tmp)), dtype=float)
         param[-1, :] = tmp
         Acz, Ahe = averageAmplitudes(param[-1, :], vmin, vmax, delta_nu=delta_nu, 
@@ -188,9 +189,9 @@ def fit(freq, num_of_n, delta_nu, num_of_dif2=None, freqDif2=None, icov=None, me
             for i in range(n_rln):
                 freq_rln[:, 2] = np.random.normal(loc=freq[:, 2], scale=freq[:, 3])
                 dif2_rln = sd(freq_rln, num_of_n, num_of_dif2)            
-                param[i, :], chi2[i], reg[i], ier[i] = fit_sd(dif2_rln, icov, delta_nu, 
-                    tol_grad_sd=tol_grad, regu_param_sd=regu_param, num_guess=n_guess, 
-                    tauhe=tauhe, dtauhe=dtauhe, taucz=taucz, dtaucz=dtaucz)
+                param[i, :], chi2[i], reg[i], ier[i] = fit_sd(dif2_rln, icov, 
+                    acousticRadius, tauhe, dtauhe, taucz, dtaucz, tol_grad_sd=tol_grad,
+                    regu_param_sd=regu_param, num_guess=n_guess) 
                 Acz, Ahe = averageAmplitudes(param[i, :], vmin, vmax, delta_nu=delta_nu, 
                     method=method)
                 print ('N_rln  Ier  Chi2  Reg  Acz  Tcz  Ahe  The = %5d %5d %12.4f %8.4f '

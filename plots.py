@@ -91,13 +91,13 @@ def fitSummary(num_of_l, freq, num_of_n, delta_nu, param, param_rln, n_rln, meth
     # Initialize acoutic depths (if they are None)
     acousticRadius = 5.e5 / delta_nu
     if tauhe is None:
-        tauhe = 0.15 * acousticRadius
+        tauhe = 0.16 * acousticRadius + 48.
     if dtauhe is None:
-        dtauhe = 0.10 * acousticRadius
+        dtauhe = 0.05 * acousticRadius
     if taucz is None:
-        taucz = 0.50 * acousticRadius
+        taucz = 0.37 * acousticRadius + 900.
     if dtaucz is None:
-        dtaucz = 0.20 * acousticRadius
+        dtaucz = 0.10 * acousticRadius
 
     # List of colors
     colorList = ['#D55E00', '#56B4E9', '#000000', 'darkgrey', '#6C9D34', '#482F76']
