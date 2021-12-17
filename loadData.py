@@ -73,16 +73,34 @@ def loadFit(filename):
         method = data['header/method'][()]
         regu_param = data['header/regu_param'][()]
         tol_grad = data['header/tol_grad'][()]
-        tauhe = data['header/tauhe'][()]
-        dtauhe = data['header/dtauhe'][()]
-        taucz = data['header/taucz'][()]
-        dtaucz = data['header/dtaucz'][()]
+        try:
+            tauhe = data['header/tauhe'][()]
+        except KeyError:
+            tauhe = None
+        try:
+            dtauhe = data['header/dtauhe'][()]
+        except KeyError:
+            dtauhe = None
+        try:
+            taucz = data['header/taucz'][()]
+        except KeyError:
+            taucz = None
+        try:
+            dtaucz = data['header/dtaucz'][()]
+        except KeyError:
+            dtaucz = None
         num_of_l = data['obs/num_of_l'][()]
         freq = data['obs/freq'][()]
         num_of_n = data['obs/num_of_n'][()]
         delta_nu = data['obs/delta_nu'][()]
-        freqDif2 = data['obs/freqDif2'][()]
-        icov = data['obs/icov'][()]
+        try:
+            freqDif2 = data['obs/freqDif2'][()]
+        except KeyError:
+            freqDif2 = None
+        try:
+            icov = data['obs/icov'][()]
+        except KeyError:
+            icov = None
         param = data['fit/param'][()]
         chi2 = data['fit/chi2'][()]
         reg = data['fit/reg'][()]

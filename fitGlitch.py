@@ -126,16 +126,22 @@ def obsFit(inFreq, outPng, outHdf5, num_of_l=3, n_rln=1000, method='FQ', tauhe=N
         f.create_dataset('header/method', data=method)
         f.create_dataset('header/regu_param', data=regu_param)
         f.create_dataset('header/tol_grad', data=tol_grad)
-        f.create_dataset('header/tauhe', dtype=float, data=tauhe)
-        f.create_dataset('header/dtauhe', dtype=float, data=dtauhe)
-        f.create_dataset('header/taucz', dtype=float, data=taucz)
-        f.create_dataset('header/dtaucz', dtype=float, data=dtaucz)
+        if tauhe is not None:
+            f.create_dataset('header/tauhe', data=tauhe)
+        if dtauhe is not None:
+            f.create_dataset('header/dtauhe', data=dtauhe)
+        if taucz is not None:
+            f.create_dataset('header/taucz', data=taucz)
+        if dtaucz is not None:
+            f.create_dataset('header/dtaucz', data=dtaucz)
         f.create_dataset('obs/num_of_l', data=num_of_l)
         f.create_dataset('obs/freq', data=freq)
         f.create_dataset('obs/num_of_n', data=num_of_n)
         f.create_dataset('obs/delta_nu', data=delta_nu)
-        f.create_dataset('obs/freqDif2', dtype=float, data=freqDif2)
-        f.create_dataset('obs/icov', dtype=float, data=icov)
+        if freqDif2 is not None:
+            f.create_dataset('obs/freqDif2', data=freqDif2)
+        if icov is not None:
+            f.create_dataset('obs/icov', data=icov)
         f.create_dataset('fit/param', data=param)
         f.create_dataset('fit/chi2', data=chi2)
         f.create_dataset('fit/reg', data=reg)
