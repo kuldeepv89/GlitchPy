@@ -14,7 +14,7 @@ vmin, vmax = None, None
 
 
 # Fit related data
-header, obsData, fitData = loadFit(filename)
+header, obsData, fitData, rtoData = loadFit(filename)
 
 method, regu_param, tol_grad, tauhe, dtauhe, taucz, dtaucz = header
 num_of_l, freq, num_of_n, delta_nu, freqDif2, icov = obsData

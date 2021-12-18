@@ -105,10 +105,19 @@ def loadFit(filename):
         chi2 = data['fit/chi2'][()]
         reg = data['fit/reg'][()]
         ier = data['fit/ier'][()]
+        try:
+            rtype = data['rto/rtype'][()]
+        except KeyError:
+            rtype = None
+        if rtype is not None:
+            ratio = data['rto/ratio'][()]
+        else:
+            ratio = None
     
     # Group the data
     header  = (method, regu_param, tol_grad, tauhe, dtauhe, taucz, dtaucz)
     obsData = (num_of_l, freq, num_of_n, delta_nu, freqDif2, icov)
     fitData = (param, chi2, reg, ier)
+    rtoData = (rtype, ratio)
     
-    return header, obsData, fitData
+    return header, obsData, fitData, rtoData
