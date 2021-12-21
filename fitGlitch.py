@@ -52,6 +52,12 @@ tauhe, dtauhe = None, None
 taucz, dtaucz = None, None
 
 
+# Frequency range for the average amplitude
+# --> If vmin = None, assume minimum value of the fitted frequencies
+# --> If vmax = None, assume maximum value of the fitted frequencies
+vmin, vmax = None, None
+
+
 # Ratio type ("r01", "r10", "r02", "r010", "r012", "r102")
 rtype = "r012"
 
@@ -70,13 +76,11 @@ for star in stars:
     print ()
     print ("Fit star %s using method %s..." %(star, method))
 
-    # Complete path to the input frequency file
-    freqfile = path + star + "/" + star + ".txt"
-    if not os.path.isfile(freqfile):
-        raise FileNotFoundError("Input frequency file not found %s!" %(freqfile))
-
     # Load observed oscillation frequencies
-    freq, num_of_mode, num_of_n, delta_nu = ld.loadFreq(freqfile, num_of_l)
+    filename = path + star + "/" + star + ".txt"
+    if not os.path.isfile(filename):
+        raise FileNotFoundError("Input frequency file not found %s!" %(filename))
+    freq, num_of_mode, num_of_n, delta_nu = ld.loadFreq(filename, num_of_l)
     print ('Total number of modes = %d' %(num_of_mode))
     print ('Number of radial orders for each l = ', num_of_n)
     print ('Large frequency separation = %.2f' %(delta_nu))
@@ -122,7 +126,10 @@ for star in stars:
 
     # Print Summary
     # --> Print average amplitude, acoustic depth and phase of CZ signature
-    vmin, vmax = np.amin(freq[:, 2]), np.amax(freq[:, 2])
+    if vmin is None:
+        vmin = np.amin(freq[:, 2])
+    if vmax is None:
+        vmax = np.amax(freq[:, 2])
     Acz_rln, Ahe_rln = np.zeros(nfit_rln), np.zeros(nfit_rln)
     for j in range(nfit_rln):
         Acz_rln[j], Ahe_rln[j] = sg.averageAmplitudes(
@@ -149,31 +156,14 @@ for star in stars:
     print ("Median The,  nerr,  perr = " + 3 * "%9.2f" %(The, TheNErr, ThePErr))
     Phe, PheNErr, PhePErr = sg.medianAndErrors(param_rln[:, -1])
     print ("Median Phe,  nerr,  perr = " + 3 * "%9.4f" %(Phe, PheNErr, PhePErr))
-
-
-    # Generate a summary plot
-    filename = path + star + "/" + star + "_" + method + ".png"  
-    plots.fitSummary(
-        num_of_l, 
-        freq, 
-        num_of_n, 
-        delta_nu, 
-        param[-1, :], 
-        param_rln, 
-        n_rln, 
-        method=method, 
-        freqDif2=freqDif2, 
-        tauhe=tauhe, 
-        dtauhe=dtauhe, 
-        taucz=taucz, 
-        dtaucz=dtaucz, 
-        filename=filename
-    )
     
     
-    # Store data in a HDF5 file
-    filename = path + star + "/" + star + "_" + method + ".hdf5"  
-    if os.path.exists(filename):
+    # Store data in HDF5 file
+    outputdir = path + star + "/" + method + "/"
+    if not os.path.isdir(outputdir):
+        os.makedirs(outputdir)
+    filename = outputdir + star + ".hdf5"  
+    if os.path.isfile(filename):
         os.remove(filename)
     with h5py.File(filename, 'w') as f:
         f.create_dataset('header/method', data=method)
@@ -187,10 +177,11 @@ for star in stars:
             f.create_dataset('header/taucz', data=taucz)
         if dtaucz is not None:
             f.create_dataset('header/dtaucz', data=dtaucz)
-        f.create_dataset('obs/num_of_l', data=num_of_l)
         f.create_dataset('obs/freq', data=freq)
         f.create_dataset('obs/num_of_n', data=num_of_n)
         f.create_dataset('obs/delta_nu', data=delta_nu)
+        f.create_dataset('obs/vmin', data=vmin)
+        f.create_dataset('obs/vmax', data=vmax)
         if freqDif2 is not None:
             f.create_dataset('obs/freqDif2', data=freqDif2)
         if icov is not None:
@@ -202,3 +193,8 @@ for star in stars:
         if rtype is not None:
             f.create_dataset('rto/rtype', data=rtype)
             f.create_dataset('rto/ratio', data=ratio)
+
+
+    # Generate fit summary plots
+    filename = outputdir + star + ".png"  
+    plots.fitSummary(outputdir, star)

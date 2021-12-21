@@ -17,7 +17,7 @@ vmin, vmax = None, None
 header, obsData, fitData, rtoData = loadFit(filename)
 
 method, regu_param, tol_grad, tauhe, dtauhe, taucz, dtaucz = header
-num_of_l, freq, num_of_n, delta_nu, freqDif2, icov = obsData
+freq, num_of_n, delta_nu, vmin, vmax, freqDif2, icov = obsData
 param, chi2, reg, ier = fitData
 
 

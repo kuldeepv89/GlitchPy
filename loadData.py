@@ -89,10 +89,11 @@ def loadFit(filename):
             dtaucz = data['header/dtaucz'][()]
         except KeyError:
             dtaucz = None
-        num_of_l = data['obs/num_of_l'][()]
         freq = data['obs/freq'][()]
         num_of_n = data['obs/num_of_n'][()]
         delta_nu = data['obs/delta_nu'][()]
+        vmin = data['obs/vmin'][()]
+        vmax = data['obs/vmax'][()]
         try:
             freqDif2 = data['obs/freqDif2'][()]
         except KeyError:
@@ -116,7 +117,7 @@ def loadFit(filename):
     
     # Group the data
     header  = (method, regu_param, tol_grad, tauhe, dtauhe, taucz, dtaucz)
-    obsData = (num_of_l, freq, num_of_n, delta_nu, freqDif2, icov)
+    obsData = (freq, num_of_n, delta_nu, vmin, vmax, freqDif2, icov)
     fitData = (param, chi2, reg, ier)
     rtoData = (rtype, ratio)
     

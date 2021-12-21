@@ -1,10 +1,441 @@
 import sys
 import numpy as np
+from loadData import loadFit
 import supportGlitch as sg
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator, FormatStrFormatter
 import seaborn as sns
+
+
+
+#-----------------------------------------------------------------------------------------
+def fitSummary(path, star):
+    '''
+    Plots summarizing the fit
+
+    Parameters
+    ----------
+    path : str
+        Complete path of the folder containing the hdf5 file (from the glitch fit) 
+    star : str
+        Star name or ID 
+
+    Return
+    ------
+    A plots summarizing the fit
+    '''
+#-----------------------------------------------------------------------------------------
+
+    # Load data
+    header, obsData, fitData, rtoData = loadFit(path + star + ".hdf5")
+    method, regu_param, tol_grad, tauhe, dtauhe, taucz, dtaucz = header
+    freq, num_of_n, delta_nu, vmin, vmax, freqDif2, icov = obsData
+    param, chi2, reg, ier = fitData
+
+    # Number of harmonic degrees and realizations
+    num_of_l = len(num_of_n)
+    n_rln = len(ier) - 1
+
+    # Glitch parameters for successfully fitted realizations
+    param_rln, ier_rln = param[0:n_rln, :], ier[0:n_rln]
+    param_rln = param_rln[ier_rln == 0, :]
+    nfit_rln = param_rln.shape[0]
+
+    # Average amplitudes
+    Ahe_rln = np.zeros(nfit_rln)
+    Acz_rln = np.zeros(nfit_rln)
+    for i in range(nfit_rln):
+        Acz_rln[i], Ahe_rln[i] = sg.averageAmplitudes(
+            param_rln[i, :], vmin, vmax, delta_nu=delta_nu, method=method
+        )
+    Acz_orig, Ahe_orig = sg.averageAmplitudes(
+        param[-1, :], vmin, vmax, delta_nu=delta_nu, method=method
+    )
+
+    # Initial guesses for various acoutic depths 
+    acousticRadius = 5.e5 / delta_nu
+    if tauhe is None:
+        tauhe = 0.16 * acousticRadius + 48.
+    if dtauhe is None:
+        dtauhe = 0.05 * acousticRadius
+    if taucz is None:
+        taucz = 0.37 * acousticRadius + 900.
+    if dtaucz is None:
+        dtaucz = 0.10 * acousticRadius
+
+
+    # List of colors
+    colorList = ['#D55E00', '#56B4E9', '#000000', 'darkgrey', '#6C9D34', '#482F76']
+    markerList = ['o', '*', 'd', '^', 'h']
+
+
+    # Plot showing the fit to glitch signatures
+    #------------------------------------------ 
+    fig = plt.figure()
+    sns.set(rc={'text.usetex' : True})
+    sns.set_style("ticks")
+    fig.subplots_adjust(bottom=0.15, right=0.95, top=0.95, left=0.15)
+
+    ax = fig.add_subplot(111)
+    ax.set_rasterization_zorder(-1)
+
+    # Fitting oscillation frequencies
+    if method.lower() == 'fq':
+
+        xmin, xmax = np.amin(freq[:, 2]), np.amax(freq[:, 2])
+        plt.axhline(y=0., ls=":", color="k", lw=1)
+
+        obsSignal = freq[:, 2] - sg.smoothComponent(
+            param[-1, :], 
+            l=freq[:, 0].astype(int), 
+            n=freq[:, 1].astype(int), 
+            num_of_l=num_of_l, 
+            method=method
+        )
+
+        n1 = 0
+        for i in range(num_of_l):
+            n2 = n1 + num_of_n[i]
+            ax.errorbar(freq[n1:n2, 2], obsSignal[n1:n2], yerr=freq[n1:n2, 3], 
+                fmt=markerList[i], ms=5, lw=1, ecolor=colorList[i], mec=colorList[i], 
+                mfc='white', label=r'$l = $'+str(i)
+            )
+            n1 = n2    
+
+        xnu = np.linspace(xmin, xmax, 501)
+        modSignal = sg.totalGlitchSignal(xnu, param[-1, :])
+        plt.plot(xnu, modSignal, '-', lw=2, color=colorList[-1])
+
+    # Fitting second differences
+    elif method.lower() == 'sd':
+        if freqDif2 is None:
+            raise ValueError("freqDif2 cannot be None for SD!")
+
+        xmin, xmax = np.amin(freqDif2[:, 2]), np.amax(freqDif2[:, 2])
+        plt.axhline(y=0., ls=":", color="k", lw=1)
+
+        obsSignal = freqDif2[:, 4] - sg.smoothComponent(
+            param[-1, :], 
+            nu=freqDif2[:, 2],
+            method=method
+        )
+
+        n1 = 0
+        for i in range(num_of_l):
+            n2 = n1 + num_of_n[i] - 2
+            ax.errorbar(freqDif2[n1:n2, 2], obsSignal[n1:n2], yerr=freqDif2[n1:n2, 5], 
+                fmt=markerList[i], ms=5, lw=1, ecolor=colorList[i], mec=colorList[i], 
+                mfc='white', label=r'$l = $'+str(i)
+            )
+            n1 = n2    
+
+        xnu = np.linspace(xmin, xmax, 501)
+        modSignal = sg.totalGlitchSignal(xnu, param[-1, :])
+        plt.plot(xnu, modSignal, '-', lw=2, color=colorList[-1])
+
+    else:
+        raise ValueError("Unrecognized fitting method %s!" %(method))
+
+    ax.legend(loc='upper center', fontsize=18, handlelength=1., handletextpad=0.1, 
+        ncol=num_of_l, columnspacing=0.5, frameon=False)
+    ax.set_xlabel(r'$\nu \ (\mu {\rm Hz})$', fontsize=18, labelpad=3)
+    if method.lower() == 'fq':
+        ax.set_ylabel(r'$\nu_{\rm glitch} \ (\mu {\rm Hz})$', fontsize=22, labelpad=3)
+    elif method.lower() == 'sd':
+        ax.set_ylabel(r'$\delta^2\nu_{\rm glitch} \ (\mu {\rm Hz})$', fontsize=22, 
+            labelpad=3)
+    ax.tick_params(axis='y', labelsize=18, which='both', direction='inout',
+        pad=3)
+    ax.tick_params(axis='x', labelsize=18, which='both', direction='inout',
+        pad=3)
+
+    xmajor, xminor = majMinTick(xmin-20., xmax+20., nxmajor=6, nxminor=5)
+    ax.set_xlim(left=xmin-20., right=xmax+20.)
+    minLoc = MultipleLocator(xminor)
+    ax.xaxis.set_minor_locator(minLoc)
+    majLoc = MultipleLocator(xmajor)
+    ax.xaxis.set_major_locator(majLoc)
+    ax.xaxis.set_major_formatter(FormatStrFormatter('%d'))
+
+    ymax = np.amax(abs(obsSignal)) + 0.1
+    ymin = -ymax
+    ymajor, yminor = majMinTick(ymin, ymax, nxmajor=7, nxminor=5)
+    ax.set_ylim(bottom=ymin, top=ymax)
+    minLoc = MultipleLocator(yminor)
+    ax.yaxis.set_minor_locator(minLoc)
+    majLoc = MultipleLocator(ymajor)
+    ax.yaxis.set_major_locator(majLoc)
+    ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+
+    fig.savefig(path + star + "_fit.png", dpi=400, bbox_inches='tight')
+    plt.close(fig)
+
+
+    # Plot showing distributions of the He glitch parameters
+    #------------------------------------------------------- 
+    fig = plt.figure()
+    sns.set(rc={'text.usetex' : True})
+    sns.set_style("ticks")
+    fig.subplots_adjust(
+        bottom=0.12, right=0.95, top=0.98, left=0.15, wspace=0.25, hspace=0.35
+    )
+
+    # Average amplitude 
+    ax1 = fig.add_subplot(221)
+    ax1.set_rasterization_zorder(-1)
+    
+    Ahe, AheNErr, AhePErr = sg.medianAndErrors(Ahe_rln)
+    xmin = max(0., Ahe - 10. * AheNErr)
+    xmax = Ahe + 10. * AhePErr 
+
+    ax1.hist(Ahe_rln, bins=np.linspace(xmin, xmax, 50), color=colorList[0])
+    ax1.axvline(x=Ahe_orig, ls="-", color='k', lw=1)
+
+    ax1.set_xlabel(
+        r'$\langle A_{\rm He} \rangle \ (\mu {\rm Hz})$', fontsize=11, labelpad=1
+    )
+    ax1.set_ylabel(r'Frequency', fontsize=11, labelpad=1)
+    ax1.tick_params(axis='y', labelsize=9, which='both', direction='inout', pad=1)
+    ax1.tick_params(axis='x', labelsize=9, which='both', direction='inout', pad=1)
+
+    xmajor, xminor = majMinTick(xmin, xmax, nxmajor=4, nxminor=5)
+    ax1.set_xlim(left=xmin, right=xmax)
+    minLoc = MultipleLocator(xminor)
+    ax1.xaxis.set_minor_locator(minLoc)
+    majLoc = MultipleLocator(xmajor)
+    ax1.xaxis.set_major_locator(majLoc)
+    ax1.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+
+    ymin, ymax = ax1.get_ylim()
+    ymajor, yminor = majMinTick(ymin, ymax, nxmajor=4, nxminor=5)
+    ax1.set_ylim(bottom=ymin, top=ymax)
+    minLoc = MultipleLocator(yminor)
+    ax1.yaxis.set_minor_locator(minLoc)
+    majLoc = MultipleLocator(ymajor)
+    ax1.yaxis.set_major_locator(majLoc)
+    ax1.yaxis.set_major_formatter(FormatStrFormatter('%d'))
+    
+    # Acoutic width 
+    ax2 = fig.add_subplot(222)
+    ax2.set_rasterization_zorder(-1)
+    
+    Dhe, DheNErr, DhePErr = sg.medianAndErrors(param_rln[:, -3])
+    xmin = max(0., Dhe - 10. * DheNErr)
+    xmax = min(acousticRadius, Dhe + 10. * DhePErr)
+
+    ax2.hist(param_rln[:, -3], bins=np.linspace(xmin, xmax, 50), color=colorList[0])
+    ax2.axvline(x=param[-1, -3], ls="-", color='k', lw=1)
+    
+    ax2.set_xlabel(r'$\Delta_{\rm He}$ ({\rm s})', fontsize=11, labelpad=1)
+    ax2.set_ylabel(r'Frequency', fontsize=11, labelpad=1)
+    ax2.tick_params(axis='y', labelsize=9, which='both', direction='inout', pad=1)
+    ax2.tick_params(axis='x', labelsize=9, which='both', direction='inout', pad=1)
+
+    xmajor, xminor = majMinTick(xmin, xmax, nxmajor=4, nxminor=5)
+    ax2.set_xlim(left=xmin, right=xmax)
+    minLoc = MultipleLocator(xminor)
+    ax2.xaxis.set_minor_locator(minLoc)
+    majLoc = MultipleLocator(xmajor)
+    ax2.xaxis.set_major_locator(majLoc)
+    ax2.xaxis.set_major_formatter(FormatStrFormatter('%d'))
+
+    ymin, ymax = ax2.get_ylim()
+    ymajor, yminor = majMinTick(ymin, ymax, nxmajor=4, nxminor=5)
+    ax2.set_ylim(bottom=ymin, top=ymax)
+    minLoc = MultipleLocator(yminor)
+    ax2.yaxis.set_minor_locator(minLoc)
+    majLoc = MultipleLocator(ymajor)
+    ax2.yaxis.set_major_locator(majLoc)
+    ax2.yaxis.set_major_formatter(FormatStrFormatter('%d'))
+
+    # Acoutic depth 
+    ax3 = fig.add_subplot(223)
+    ax3.set_rasterization_zorder(-1)
+    
+    The, TheNErr, ThePErr = sg.medianAndErrors(param_rln[:, -2])
+    xmin = max(0., The - 10. * TheNErr)
+    xmax = min(acousticRadius, The + 10. * ThePErr)
+
+    ax3.hist(param_rln[:, -2], bins=np.linspace(xmin, xmax, 50), color=colorList[0])
+    ymin, ymax = ax3.get_ylim()
+    ax3.plot((tauhe - dtauhe, tauhe + dtauhe), (ymax, ymax), 'k-', lw=0.5)
+    ax3.axvline(x=param[-1, -2], ls="-", color="k", lw=1)
+    
+    ax3.set_xlabel(r'$\tau_{\rm He}$ ({\rm s})', fontsize=11, labelpad=1)
+    ax3.set_ylabel(r'Frequency', fontsize=11, labelpad=1)
+    ax3.tick_params(axis='y', labelsize=9, which='both', direction='inout', pad=1)
+    ax3.tick_params(axis='x', labelsize=9, which='both', direction='inout', pad=1)
+
+    xmajor, xminor = majMinTick(xmin, xmax, nxmajor=4, nxminor=5)
+    ax3.set_xlim(left=xmin, right=xmax)
+    minLoc = MultipleLocator(xminor)
+    ax3.xaxis.set_minor_locator(minLoc)
+    majLoc = MultipleLocator(xmajor)
+    ax3.xaxis.set_major_locator(majLoc)
+    ax3.xaxis.set_major_formatter(FormatStrFormatter('%d'))
+
+    ymin, ymax = ax3.get_ylim()
+    ymajor, yminor = majMinTick(ymin, ymax, nxmajor=4, nxminor=5)
+    ax3.set_ylim(bottom=ymin, top=ymax)
+    minLoc = MultipleLocator(yminor)
+    ax3.yaxis.set_minor_locator(minLoc)
+    majLoc = MultipleLocator(ymajor)
+    ax3.yaxis.set_major_locator(majLoc)
+    ax3.yaxis.set_major_formatter(FormatStrFormatter('%d'))
+
+    # Phase 
+    ax4 = fig.add_subplot(224)
+    ax4.set_rasterization_zorder(-1)
+    
+    xmin, xmax = 0., 2. * np.pi 
+
+    ax4.hist(param_rln[:, -1], bins=np.linspace(xmin, xmax, 50), color=colorList[0])
+    ax4.axvline(x=param[-1, -1], ls="-", color="k", lw=1)
+    
+    ax4.set_xlabel(r'$\phi_{\rm He}$', fontsize=11, labelpad=1)
+    ax4.set_ylabel(r'Frequency', fontsize=11, labelpad=1)
+    ax4.tick_params(axis='y', labelsize=9, which='both', direction='inout', pad=1)
+    ax4.tick_params(axis='x', labelsize=9, which='both', direction='inout', pad=1)
+
+    xmajor, xminor = majMinTick(xmin, xmax, nxmajor=4, nxminor=5)
+    ax4.set_xlim(left=xmin, right=xmax)
+    minLoc = MultipleLocator(xminor)
+    ax4.xaxis.set_minor_locator(minLoc)
+    majLoc = MultipleLocator(xmajor)
+    ax4.xaxis.set_major_locator(majLoc)
+    ax4.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+
+    ymin, ymax = ax4.get_ylim()
+    ymajor, yminor = majMinTick(ymin, ymax, nxmajor=4, nxminor=5)
+    ax4.set_ylim(bottom=ymin, top=ymax)
+    minLoc = MultipleLocator(yminor)
+    ax4.yaxis.set_minor_locator(minLoc)
+    majLoc = MultipleLocator(ymajor)
+    ax4.yaxis.set_major_locator(majLoc)
+    ax4.yaxis.set_major_formatter(FormatStrFormatter('%d'))
+
+    fig.savefig(path + star + "_He.png", dpi=400, bbox_inches='tight')
+    plt.close(fig)
+
+
+    # Plot showing distributions of the BCZ glitch parameters
+    #-------------------------------------------------------- 
+    fig = plt.figure()
+    sns.set(rc={'text.usetex' : True})
+    sns.set_style("ticks")
+    fig.subplots_adjust(
+        bottom=0.12, right=0.90, top=0.98, left=0.20, wspace=0.25, hspace=0.35
+    )
+
+    # Average amplitude 
+    ax1 = fig.add_subplot(311)
+    ax1.set_rasterization_zorder(-1)
+    
+    Acz, AczNErr, AczPErr = sg.medianAndErrors(Acz_rln)
+    xmin = max(0., Acz - 10. * AczNErr)
+    xmax = Acz + 10. * AczPErr 
+
+    ax1.hist(Acz_rln, bins=np.linspace(xmin, xmax, 100), color=colorList[0], 
+        label=r''+str(nfit_rln)+'/'+str(n_rln)
+    )
+    ax1.axvline(x=Acz_orig, ls="-", color='k', lw=1)
+
+    ax1.legend(loc='upper right', fontsize=9, frameon=False)
+    ax1.set_xlabel(
+        r'$\langle A_{\rm CZ} \rangle \ (\mu {\rm Hz})$', fontsize=11, labelpad=1
+    )
+    ax1.set_ylabel(r'Frequency', fontsize=11, labelpad=1)
+    ax1.tick_params(axis='y', labelsize=9, which='both', direction='inout', pad=1)
+    ax1.tick_params(axis='x', labelsize=9, which='both', direction='inout', pad=1)
+
+    xmajor, xminor = majMinTick(xmin, xmax, nxmajor=7, nxminor=5)
+    ax1.set_xlim(left=xmin, right=xmax)
+    minLoc = MultipleLocator(xminor)
+    ax1.xaxis.set_minor_locator(minLoc)
+    majLoc = MultipleLocator(xmajor)
+    ax1.xaxis.set_major_locator(majLoc)
+    ax1.xaxis.set_major_formatter(FormatStrFormatter('%.3f'))
+
+    ymin, ymax = ax1.get_ylim()
+    ymajor, yminor = majMinTick(ymin, ymax, nxmajor=4, nxminor=5)
+    ax1.set_ylim(bottom=ymin, top=ymax)
+    minLoc = MultipleLocator(yminor)
+    ax1.yaxis.set_minor_locator(minLoc)
+    majLoc = MultipleLocator(ymajor)
+    ax1.yaxis.set_major_locator(majLoc)
+    ax1.yaxis.set_major_formatter(FormatStrFormatter('%d'))
+    
+    # Acoutic depth
+    ax2 = fig.add_subplot(312)
+    ax2.set_rasterization_zorder(-1)
+    
+    Tcz, TczNErr, TczPErr = sg.medianAndErrors(param_rln[:, -6])
+    xmin = max(0., Tcz - 10. * TczNErr)
+    xmax = min(acousticRadius, Tcz + 10. * TczPErr)
+
+    ax2.hist(param_rln[:, -6], bins=np.linspace(xmin, xmax, 100), color=colorList[0])
+    ymin, ymax = ax2.get_ylim()
+    ax2.plot((taucz - dtaucz, taucz + dtaucz), (ymax, ymax), 'k-', lw=0.5)
+    ax2.axvline(x=param[-1, -6], ls="-", color="k", lw=1)
+
+    ax2.set_xlabel(r'$\tau_{\rm CZ}$ ({\rm s})', fontsize=11, labelpad=1)
+    ax2.set_ylabel(r'Frequency', fontsize=11, labelpad=1)
+    ax2.tick_params(axis='y', labelsize=9, which='both', direction='inout', pad=1)
+    ax2.tick_params(axis='x', labelsize=9, which='both', direction='inout', pad=1)
+
+    xmajor, xminor = majMinTick(xmin, xmax, nxmajor=6, nxminor=5)
+    ax2.set_xlim(left=xmin, right=xmax)
+    minLoc = MultipleLocator(xminor)
+    ax2.xaxis.set_minor_locator(minLoc)
+    majLoc = MultipleLocator(xmajor)
+    ax2.xaxis.set_major_locator(majLoc)
+    ax2.xaxis.set_major_formatter(FormatStrFormatter('%d'))
+
+    ymin, ymax = ax2.get_ylim()
+    ymajor, yminor = majMinTick(ymin, ymax, nxmajor=4, nxminor=5)
+    ax2.set_ylim(bottom=ymin, top=ymax)
+    minLoc = MultipleLocator(yminor)
+    ax2.yaxis.set_minor_locator(minLoc)
+    majLoc = MultipleLocator(ymajor)
+    ax2.yaxis.set_major_locator(majLoc)
+    ax2.yaxis.set_major_formatter(FormatStrFormatter('%d'))
+    
+    # Phase 
+    ax3 = fig.add_subplot(313)
+    ax3.set_rasterization_zorder(-1)
+    
+    xmin, xmax = 0., 2. * np.pi 
+
+    ax3.hist(param_rln[:, -5], bins=np.linspace(xmin, xmax, 100), color=colorList[0])
+    ax3.axvline(x=param[-1, -5], ls="-", color="k", lw=1)
+    
+    ax3.set_xlabel(r'$\phi_{\rm CZ}$', fontsize=11, labelpad=1)
+    ax3.set_ylabel(r'Frequency', fontsize=11, labelpad=1)
+    ax3.tick_params(axis='y', labelsize=9, which='both', direction='inout', pad=1)
+    ax3.tick_params(axis='x', labelsize=9, which='both', direction='inout', pad=1)
+
+    xmajor, xminor = majMinTick(xmin, xmax, nxmajor=7, nxminor=5)
+    ax3.set_xlim(left=xmin, right=xmax)
+    minLoc = MultipleLocator(xminor)
+    ax3.xaxis.set_minor_locator(minLoc)
+    majLoc = MultipleLocator(xmajor)
+    ax3.xaxis.set_major_locator(majLoc)
+    ax3.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+
+    ymin, ymax = ax3.get_ylim()
+    ymajor, yminor = majMinTick(ymin, ymax, nxmajor=4, nxminor=5)
+    ax3.set_ylim(bottom=ymin, top=ymax)
+    minLoc = MultipleLocator(yminor)
+    ax3.yaxis.set_minor_locator(minLoc)
+    majLoc = MultipleLocator(ymajor)
+    ax3.yaxis.set_major_locator(majLoc)
+    ax3.yaxis.set_major_formatter(FormatStrFormatter('%d'))
+
+    fig.savefig(path + star + "_CZ.png", dpi=400, bbox_inches='tight')
+    plt.close(fig)
+
+    return
 
 
 
@@ -37,297 +468,3 @@ def majMinTick(xmin, xmax, nxmajor=7, nxminor=5):
     xminor = xmajor / nxminor
 
     return xmajor, xminor
-
-
-
-#-----------------------------------------------------------------------------------------
-def fitSummary(num_of_l, freq, num_of_n, delta_nu, param, param_rln, n_rln, method='FQ', 
-        freqDif2=None, tauhe=None, dtauhe=None, taucz=None, dtaucz=None, 
-        filename='./fit.png'):
-    '''
-    Plot summarizing the quality of fit
-
-    Parameters
-    ----------
-    num_of_l : int
-        Number of harmonic degrees (starting from l = 0)
-    freq : array
-        Observed modes (l, n, v(muHz), err(muHz)) 
-    num_of_n : array of int
-        Number of modes for each l
-    delta_nu : float
-        An estimate of large frequncy separation (muHz)
-    param : array
-        Fitted parameters 
-    param_rln : array
-        Parameters for successfully fitted realizations
-    n_rln : int
-        Number of realizations. If n_rln = 0, just fit the original frequencies/differences
-    method : str
-        Fitting method ('FQ' or 'SD')
-    freqDif2 : array
-        Second differences (l, n, v(muHz), err(muHz), dif2(muHz), err(muHz))
-    tauhe : float, optional
-        Determines the range in acoustic depth (s) of He glitch for global minimum 
-        search (tauhe - dtauhe, tauhe + dtauhe)
-    dtauhe : float, optional
-        Determines the range in acoustic depth (s) of He glitch for global minimum 
-        search (tauhe - dtauhe, tauhe + dtauhe)
-    taucz : float, optional
-        Determines the range in acoustic depth (s) of CZ glitch for global minimum 
-        search (taucz - dtaucz, taucz + dtaucz)
-    dtaucz : float, optional
-        Determines the range in acoustic depth (s) of CZ glitch for global minimum 
-        search (taucz - dtaucz, taucz + dtaucz)
-    filename: str
-        Complete path to the output file containing the plot
-
-    Return
-    ------
-    A plot summarizing the quality of fit
-    '''
-#-----------------------------------------------------------------------------------------
-
-    # Initialize acoutic depths (if they are None)
-    acousticRadius = 5.e5 / delta_nu
-    if tauhe is None:
-        tauhe = 0.16 * acousticRadius + 48.
-    if dtauhe is None:
-        dtauhe = 0.05 * acousticRadius
-    if taucz is None:
-        taucz = 0.37 * acousticRadius + 900.
-    if dtaucz is None:
-        dtaucz = 0.10 * acousticRadius
-
-    # List of colors
-    colorList = ['#D55E00', '#56B4E9', '#000000', 'darkgrey', '#6C9D34', '#482F76']
-    markerList = ['o', '*', 'd', '^', 'h']
-
-
-    fig = plt.figure()
-    sns.set(rc={'text.usetex' : True})
-    sns.set_style("ticks")
-    fig.subplots_adjust(bottom=0.12, right=0.95, top=0.98, left=0.15, wspace=0.25, 
-        hspace=0.35)
-    
-
-    # Fit to glitch signature
-    #------------------------ 
-    ax1 = fig.add_subplot(321)
-    ax1.set_rasterization_zorder(-1)
-
-    # Oscillation frequency fit
-    if method.lower() == 'fq':
-
-        xmin, xmax = np.amin(freq[:, 2]), np.amax(freq[:, 2])
-        plt.plot((xmin - 20., xmax + 20.), (0.0, 0.0), 'k:', lw=0.5)
-
-        obsSignal = freq[:, 2] - sg.smoothComponent(param, 
-            l=freq[:, 0].astype(int), n=freq[:, 1].astype(int), num_of_l=num_of_l, 
-            method=method)
-
-        n1 = 0
-        for i in range(num_of_l):
-            n2 = n1 + num_of_n[i]
-            ax1.errorbar(freq[n1:n2, 2], obsSignal[n1:n2], yerr=freq[n1:n2, 3], 
-                fmt=markerList[i], ms=3, lw=1, ecolor=colorList[i], mec=colorList[i], 
-                mfc='white', label=r'$l = $'+str(i))
-            n1 = n2    
-
-        xnu = np.linspace(xmin, xmax, 501)
-        modSignal = sg.totalGlitchSignal(xnu, param)
-        plt.plot(xnu, modSignal, '-', lw=1, color=colorList[-1])
-
-    # Second difference fit
-    elif method.lower() == 'sd':
-        if freqDif2 is None:
-            print ('freqDif2 cannot be None. Terminating the run...')
-            sys.exit(1)
-
-        xmin, xmax = np.amin(freqDif2[:, 2]), np.amax(freqDif2[:, 2])
-        plt.plot((xmin - 20., xmax + 20.), (0.0, 0.0), 'k:', lw=0.5)
-
-        obsSignal = freqDif2[:, 4] - sg.smoothComponent(param, nu=freqDif2[:, 2],
-            method=method)
-
-        n1 = 0
-        for i in range(num_of_l):
-            n2 = n1 + num_of_n[i] - 2
-            ax1.errorbar(freqDif2[n1:n2, 2], obsSignal[n1:n2], yerr=freqDif2[n1:n2, 5], 
-                fmt=markerList[i], ms=3, lw=1, ecolor=colorList[i], mec=colorList[i], 
-                mfc='white', label=r'$l = $'+str(i))
-            n1 = n2    
-
-        xnu = np.linspace(xmin, xmax, 501)
-        modSignal = sg.totalGlitchSignal(xnu, param)
-        plt.plot(xnu, modSignal, '-', lw=1, color=colorList[-1])
-
-    else:
-        print ('Fitting method is not recognized. Terminating the run...')
-        sys.exit(2)
-
-    ax1.legend(loc='upper center', fontsize=9, handlelength=1., handletextpad=0.1, 
-        ncol=num_of_l, columnspacing=0.5, frameon=False)
-    ax1.set_xlabel(r'$\nu \ (\mu {\rm Hz})$', fontsize=11, labelpad=1)
-    if method.lower() == 'fq':
-        ax1.set_ylabel(r'$\nu_{\rm glitch} \ (\mu {\rm Hz})$', fontsize=11, labelpad=1)
-    elif method.lower() == 'sd':
-        ax1.set_ylabel(r'$\delta^2\nu_{\rm glitch} \ (\mu {\rm Hz})$', fontsize=11, 
-            labelpad=1)
-    ax1.tick_params(axis='y', labelsize=9, which='both', direction='inout',
-        pad=1)
-    ax1.tick_params(axis='x', labelsize=9, which='both', direction='inout',
-        pad=1)
-
-    xmajor, xminor = majMinTick(xmin-20., xmax+20., nxmajor=4, nxminor=5)
-    ax1.set_xlim(left=xmin-20., right=xmax+20.)
-    minLoc = MultipleLocator(xminor)
-    ax1.xaxis.set_minor_locator(minLoc)
-    majLoc = MultipleLocator(xmajor)
-    ax1.xaxis.set_major_locator(majLoc)
-    ax1.xaxis.set_major_formatter(FormatStrFormatter('%d'))
-
-    ymax = np.amax(abs(obsSignal)) + 0.1
-    ymin = -ymax
-    ymajor, yminor = majMinTick(ymin, ymax, nxmajor=4, nxminor=5)
-    ax1.set_ylim(bottom=ymin, top=ymax)
-    minLoc = MultipleLocator(yminor)
-    ax1.yaxis.set_minor_locator(minLoc)
-    majLoc = MultipleLocator(ymajor)
-    ax1.yaxis.set_major_locator(majLoc)
-    ax1.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-
-
-    # Acoutic depth of the He signature    
-    #----------------------------------
-    ax2 = fig.add_subplot(322)
-    ax2.set_rasterization_zorder(-1)
-    
-    The, TheNErr, ThePErr = sg.medianAndErrors(param_rln[:, -2])
-    xmin, xmax = max(0., The - 10. * TheNErr), min(acousticRadius, The + 10. * ThePErr)
-
-    ax2.hist(param_rln[:, -2], bins=np.linspace(xmin, xmax, 50), color=colorList[0])
-
-    ymin, ymax = ax2.get_ylim()
-    ax2.plot((tauhe - dtauhe, tauhe + dtauhe), (ymax, ymax), 'k-', lw=0.5)
-
-    ymin, ymax = ax2.get_ylim()
-    ax2.plot((param[-2], param[-2]), (ymin, ymax), 'k-', lw=1)
-    
-    ax2.set_xlabel(r'$\tau_{\rm He}$ (s)', fontsize=11, labelpad=1)
-    ax2.set_ylabel(r'Frequency', fontsize=11, labelpad=1)
-    ax2.tick_params(axis='y', labelsize=9, which='both', direction='inout',
-        pad=1)
-    ax2.tick_params(axis='x', labelsize=9, which='both', direction='inout',
-        pad=1)
-
-    xmajor, xminor = majMinTick(xmin, xmax, nxmajor=4, nxminor=5)
-    ax2.set_xlim(left=xmin, right=xmax)
-    minLoc = MultipleLocator(xminor)
-    ax2.xaxis.set_minor_locator(minLoc)
-    majLoc = MultipleLocator(xmajor)
-    ax2.xaxis.set_major_locator(majLoc)
-    ax2.xaxis.set_major_formatter(FormatStrFormatter('%d'))
-
-    ymajor, yminor = majMinTick(ymin, ymax, nxmajor=4, nxminor=5)
-    ax2.set_ylim(bottom=ymin, top=ymax)
-    minLoc = MultipleLocator(yminor)
-    ax2.yaxis.set_minor_locator(minLoc)
-    majLoc = MultipleLocator(ymajor)
-    ax2.yaxis.set_major_locator(majLoc)
-    ax2.yaxis.set_major_formatter(FormatStrFormatter('%d'))
-
-    
-    # Average amplitude of the He signature    
-    #--------------------------------------
-    ax3 = fig.add_subplot(323)
-    ax3.set_rasterization_zorder(-1)
-    
-    nfit_rln = len(param_rln[:, 0])
-    Ahe_rln = np.zeros(nfit_rln)
-    vmin, vmax = np.amin(freq[:, 2]), np.amax(freq[:, 2])
-    for i in range(nfit_rln):
-        _, Ahe_rln[i] = sg.averageAmplitudes(param_rln[i, :], vmin, vmax, 
-            delta_nu=delta_nu, method=method)
-    _, Ahe_orig = sg.averageAmplitudes(param, vmin, vmax, delta_nu=delta_nu, 
-        method=method)
-
-    Ahe, AheNErr, AhePErr = sg.medianAndErrors(Ahe_rln)
-    xmin, xmax = max(0., Ahe - 10. * AheNErr), Ahe + 10. * AhePErr 
-
-    ax3.hist(Ahe_rln, bins=np.linspace(xmin, xmax, 50), color=colorList[0], 
-        label=r''+str(nfit_rln)+'/'+str(n_rln))
-
-    ymin, ymax = ax3.get_ylim()
-    ax3.plot((Ahe_orig, Ahe_orig), (ymin, ymax), 'k-', lw=1)
-
-    ax3.legend(loc='upper right', fontsize=9, frameon=False)
-    ax3.set_xlabel(r'$\langle A_{\rm He} \rangle \ (\mu {\rm Hz})$', fontsize=11, 
-        labelpad=1)
-    ax3.set_ylabel(r'Frequency', fontsize=11, labelpad=1)
-    ax3.tick_params(axis='y', labelsize=9, which='both', direction='inout',
-        pad=1)
-    ax3.tick_params(axis='x', labelsize=9, which='both', direction='inout',
-        pad=1)
-
-    xmajor, xminor = majMinTick(xmin, xmax, nxmajor=4, nxminor=5)
-    ax3.set_xlim(left=xmin, right=xmax)
-    minLoc = MultipleLocator(xminor)
-    ax3.xaxis.set_minor_locator(minLoc)
-    majLoc = MultipleLocator(xmajor)
-    ax3.xaxis.set_major_locator(majLoc)
-    ax3.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
-
-    ymajor, yminor = majMinTick(ymin, ymax, nxmajor=4, nxminor=5)
-    ax3.set_ylim(bottom=ymin, top=ymax)
-    minLoc = MultipleLocator(yminor)
-    ax3.yaxis.set_minor_locator(minLoc)
-    majLoc = MultipleLocator(ymajor)
-    ax3.yaxis.set_major_locator(majLoc)
-    ax3.yaxis.set_major_formatter(FormatStrFormatter('%d'))
-    
-
-    # Acoutic depth of the CZ signature    
-    #----------------------------------
-    ax4 = fig.add_subplot(324)
-    ax4.set_rasterization_zorder(-1)
-    
-    Tcz, TczNErr, TczPErr = sg.medianAndErrors(param_rln[:, -6])
-    xmin, xmax = max(0., Tcz - 10. * TczNErr), min(acousticRadius, Tcz + 10. * TczPErr)
-
-    ax4.hist(param_rln[:, -6], bins=np.linspace(xmin, xmax, 50), color=colorList[0])
-
-    ymin, ymax = ax4.get_ylim()
-    ax4.plot((taucz - dtaucz, taucz + dtaucz), (ymax, ymax), 'k-', lw=0.5)
-
-    ymin, ymax = ax4.get_ylim()
-    ax4.plot((param[-6], param[-6]), (ymin, ymax), 'k-', lw=1)
-
-    ax4.set_xlabel(r'$\tau_{\rm CZ}$ (s)', fontsize=11, labelpad=1)
-    ax4.set_ylabel(r'Frequency', fontsize=11, labelpad=1)
-    ax4.tick_params(axis='y', labelsize=9, which='both', direction='inout',
-        pad=1)
-    ax4.tick_params(axis='x', labelsize=9, which='both', direction='inout',
-        pad=1)
-
-    xmajor, xminor = majMinTick(xmin, xmax, nxmajor=4, nxminor=5)
-    ax4.set_xlim(left=xmin, right=xmax)
-    minLoc = MultipleLocator(xminor)
-    ax4.xaxis.set_minor_locator(minLoc)
-    majLoc = MultipleLocator(xmajor)
-    ax4.xaxis.set_major_locator(majLoc)
-    ax4.xaxis.set_major_formatter(FormatStrFormatter('%d'))
-
-    ymajor, yminor = majMinTick(ymin, ymax, nxmajor=4, nxminor=5)
-    ax4.set_ylim(bottom=ymin, top=ymax)
-    minLoc = MultipleLocator(yminor)
-    ax4.yaxis.set_minor_locator(minLoc)
-    majLoc = MultipleLocator(ymajor)
-    ax4.yaxis.set_major_locator(majLoc)
-    ax4.yaxis.set_major_formatter(FormatStrFormatter('%d'))
-    
-
-    fig.savefig(filename, dpi=400, bbox_inches='tight')
-    plt.close(fig)
-
-    return
