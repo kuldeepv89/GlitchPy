@@ -10,25 +10,23 @@ import seaborn as sns
 
 
 #-----------------------------------------------------------------------------------------
-def fitSummary(path, star):
+def plot_fitSummary(path):
     '''
     Plots summarizing the fit
 
     Parameters
     ----------
     path : str
-        Complete path of the folder containing the hdf5 file (from the glitch fit) 
-    star : str
-        Star name or ID 
+        Complete path of the folder containing the fitted data 
 
     Return
     ------
-    A plots summarizing the fit
+    Plots summarizing the fit
     '''
 #-----------------------------------------------------------------------------------------
 
     # Load data
-    header, obsData, fitData, rtoData = loadFit(path + star + ".hdf5")
+    header, obsData, fitData, rtoData = loadFit(path + "fitData.hdf5")
     method, regu_param, tol_grad, tauhe, dtauhe, taucz, dtaucz = header
     freq, num_of_n, delta_nu, vmin, vmax, freqDif2, icov = obsData
     param, chi2, reg, ier = fitData
@@ -168,7 +166,7 @@ def fitSummary(path, star):
     ax.yaxis.set_major_locator(majLoc)
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
 
-    fig.savefig(path + star + "_fit.png", dpi=400, bbox_inches='tight')
+    fig.savefig(path + "fit.png", dpi=400, bbox_inches='tight')
     plt.close(fig)
 
 
@@ -315,7 +313,7 @@ def fitSummary(path, star):
     ax4.yaxis.set_major_locator(majLoc)
     ax4.yaxis.set_major_formatter(FormatStrFormatter('%d'))
 
-    fig.savefig(path + star + "_He.png", dpi=400, bbox_inches='tight')
+    fig.savefig(path + "heliumDist.png", dpi=400, bbox_inches='tight')
     plt.close(fig)
 
 
@@ -432,7 +430,7 @@ def fitSummary(path, star):
     ax3.yaxis.set_major_locator(majLoc)
     ax3.yaxis.set_major_formatter(FormatStrFormatter('%d'))
 
-    fig.savefig(path + star + "_CZ.png", dpi=400, bbox_inches='tight')
+    fig.savefig(path + "convectionDist.png", dpi=400, bbox_inches='tight')
     plt.close(fig)
 
     return
@@ -468,3 +466,74 @@ def majMinTick(xmin, xmax, nxmajor=7, nxminor=5):
     xminor = xmajor / nxminor
 
     return xmajor, xminor
+
+
+
+#-----------------------------------------------------------------------------------------
+def plot_correlations(cov, filename="./correlations.png"):
+    """
+    Plot correlation matrix 
+
+    Parameters
+    ----------
+    cov : array
+        Covariance matrix
+    filename : str
+        File name (including full path) for the plot
+
+    Return
+    ------
+    A heatmap plot
+    """
+#-----------------------------------------------------------------------------------------
+
+    # Compute the correlation matrix
+    cor = correlation_from_covariance(cov)
+    n = cor.shape[0]
+    
+
+    fig = plt.figure()
+    sns.set(rc={'text.usetex' : True})
+    sns.set_style("ticks")
+    fig.subplots_adjust(bottom=0.15, right=0.95, top=0.95, left=0.15)
+    ax = fig.add_subplot(111)
+    ax.set_rasterization_zorder(-1)
+    
+    ax = sns.heatmap(
+        cor, vmin=-1, vmax=1, linewidths=0, linecolor='white', cmap=None, 
+        center=0, square=True
+    )
+    
+    plt.xlim(0, n)
+    plt.ylim(n, 0)
+    
+    plt.savefig(filename, dpi=400, bbox_inches='tight')
+    plt.close(fig)
+
+    return
+
+
+
+#-----------------------------------------------------------------------------------------
+def correlation_from_covariance(cov):
+    """
+    Compute correlation matrix from covariance matrix
+
+    Parameters
+    ----------
+    cov : array
+        Covariance matrix
+
+    Return
+    ------
+    cor : array
+        Correlation matrix
+    """
+#-----------------------------------------------------------------------------------------
+
+    v = np.sqrt(np.diag(cov))
+    outer_v = np.outer(v, v)
+    cor = cov / outer_v
+    cor[cov == 0] = 0
+
+    return cor

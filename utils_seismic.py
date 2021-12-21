@@ -266,6 +266,6 @@ def specific_ratio(frq, rtype="r012"):
         ratio = np.zeros(r102.shape[0])
         ratio = r102[:, 1]
     else:
-        raise ValueError("ERROR: Unrecognized ratio-type %s!" %(rtype))
+        raise ValueError("Unrecognized ratio-type %s!" %(rtype))
     
     return ratio

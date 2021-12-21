@@ -6,11 +6,12 @@ import supportGlitch as sg
 import plots
 import h5py
 import glob
+from sklearn.covariance import MinCovDet
 
 
 
 #-----------------------------------------------------------------------------------------
-# Main program
+# Set the following parameters/path/stars appropriately
 #-----------------------------------------------------------------------------------------
 # Number of harmonic degree
 num_of_l = 3 
@@ -62,10 +63,14 @@ vmin, vmax = None, None
 rtype = "r012"
 
 
+# Store median values and covariance matrix
+medCov = True
+
+
 # Path and star names
 # --> For each "star" in the list "stars" below, assume input frequency 
 # file name to be stars.txt, which is present in the folder path/star/
-# --> Output results goes to the folder path/star/
+# --> Output results go to the folder path/star/
 path, stars = './', ["16cyga"]
 #-----------------------------------------------------------------------------------------
 
@@ -158,11 +163,11 @@ for star in stars:
     print ("Median Phe,  nerr,  perr = " + 3 * "%9.4f" %(Phe, PheNErr, PhePErr))
     
     
-    # Store data in HDF5 file
+    # Store data in a HDF5 file
     outputdir = path + star + "/" + method + "/"
     if not os.path.isdir(outputdir):
         os.makedirs(outputdir)
-    filename = outputdir + star + ".hdf5"  
+    filename = outputdir + "fitData.hdf5"  
     if os.path.isfile(filename):
         os.remove(filename)
     with h5py.File(filename, 'w') as f:
@@ -195,6 +200,55 @@ for star in stars:
             f.create_dataset('rto/ratio', data=ratio)
 
 
-    # Generate fit summary plots
-    filename = outputdir + star + ".png"  
-    plots.fitSummary(outputdir, star)
+    # Store median and covariance in a HDF5 file
+    if medCov:
+        grparams = np.zeros((nfit_rln, 3))
+        grparams[:, 0], grparams[:, 1], grparams[:, 2] = (
+            Ahe_rln[:], param_rln[:, -3], param_rln[:, -2]
+        ) 
+        if rtype is not None:
+            ratio_rln = ratio[0:n_rln, :]
+            ratio_rln = ratio_rln[ier_rln == 0, :]
+            grparams = np.hstack((ratio_rln, grparams))
+
+        # Median
+        ngr = grparams.shape[1]
+        med = np.zeros(ngr)
+        for i in range(ngr):
+            med[i] = np.median(grparams[:, i])
+
+        # Covariance
+        cov = MinCovDet().fit(grparams).covariance_
+        filename = outputdir + "correlations.png"  
+        plots.plot_correlations(cov, filename=filename)
+
+        # Write to hdf5 file
+        filename = outputdir + "medCov.hdf5"  
+        with h5py.File(filename, "w") as ff:
+            if rtype is None:
+                ff.create_dataset("medglh", data=med)
+                ff.create_dataset("covglh", data=cov)
+            elif rtype == "r02":
+                ff.create_dataset("medg02", data=med)
+                ff.create_dataset("covg02", data=cov)
+            elif rtype == "r01":
+                ff.create_dataset("medg01", data=med)
+                ff.create_dataset("covg01", data=cov)
+            elif rtype == "r10":
+                ff.create_dataset("medg10", data=med)
+                ff.create_dataset("covg10", data=cov)
+            elif rtype == "r010":
+                ff.create_dataset("medg010", data=med)
+                ff.create_dataset("covg010", data=cov)
+            elif rtype == "r012":
+                ff.create_dataset("medg012", data=med)
+                ff.create_dataset("covg012", data=cov)
+            elif rtype == "r102":
+                ff.create_dataset("medg102", data=med)
+                ff.create_dataset("covg102", data=cov)
+            else:
+                raise ValueError("Unrecognized ratio-type %s!" %(rtype))
+
+
+    # Generate plots summarizing the fit
+    plots.plot_fitSummary(outputdir)

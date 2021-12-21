@@ -62,9 +62,11 @@ def loadFit(filename):
         Parameters determining the fit (method, regu_param, tol_grad, tauhe, dtauhe,
         taucz, dtaucz)
     obsData : tuple
-        Observed data (num_of_l, freq, num_of_n, delta_nu, freqDif2, icov)
+        Observed data (freq, num_of_n, delta_nu, vmin, vmax, freqDif2, icov)
     fitData : tuple
         Fit related data (param, chi2, reg, ier)
+    rtoData : tuple
+        Ratios related data (rtype, ratio)
     '''
 #-----------------------------------------------------------------------------------------
 
