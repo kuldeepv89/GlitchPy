@@ -18,7 +18,7 @@ num_of_l = 3
 
 
 # Number of realizations
-n_rln = 1000 
+n_rln = 10000 
 
 
 # Fitting method ("FQ" and "SD")
@@ -71,7 +71,7 @@ medCov = True
 # --> For each "star" in the list "stars" below, assume input frequency 
 # file name to be stars.txt, which is present in the folder path/star/
 # --> Output results go to the folder path/star/
-path, stars = './', ["16cyga"]
+path, stars = "./", ["16cyga"]
 #-----------------------------------------------------------------------------------------
 
 
@@ -127,7 +127,8 @@ for star in stars:
     nfit_rln = param_rln.shape[0]
     print ()
     print ("Fit completed...")
-    print ('Failed realizations %d/%d' %(n_rln - nfit_rln, n_rln))
+    print ("Total chi-square for the fit = %7.4f" %(chi2[-1]))
+    print ("Failed realizations = %d/%d" %(n_rln - nfit_rln, n_rln))
 
     # Print Summary
     # --> Print average amplitude, acoustic depth and phase of CZ signature
@@ -224,6 +225,8 @@ for star in stars:
 
         # Write to hdf5 file
         filename = outputdir + "medCov.hdf5"  
+        if os.path.isfile(filename):
+            os.remove(filename)
         with h5py.File(filename, "w") as ff:
             if rtype is None:
                 ff.create_dataset("medglh", data=med)
