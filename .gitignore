@@ -1,0 +1,8 @@
+__pycache__/
+
+*.so
+*.dSYM
+*.zip
+
+16cyga/FQ/
+16cyga/SD/
