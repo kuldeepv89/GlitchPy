@@ -175,6 +175,7 @@ for star in stars:
         f.create_dataset('header/method', data=method)
         f.create_dataset('header/regu_param', data=regu_param)
         f.create_dataset('header/tol_grad', data=tol_grad)
+        f.create_dataset('header/n_guess', data=n_guess)
         if tauhe is not None:
             f.create_dataset('header/tauhe', data=tauhe)
         if dtauhe is not None:
@@ -228,6 +229,10 @@ for star in stars:
         if os.path.isfile(filename):
             os.remove(filename)
         with h5py.File(filename, "w") as ff:
+            ff.create_dataset('header/method', data=method)
+            ff.create_dataset('header/regu_param', data=regu_param)
+            ff.create_dataset('header/tol_grad', data=tol_grad)
+            ff.create_dataset('header/n_guess', data=n_guess)
             if rtype is None:
                 ff.create_dataset("medglh", data=med)
                 ff.create_dataset("covglh", data=cov)

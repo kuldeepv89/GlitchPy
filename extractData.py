@@ -27,7 +27,7 @@ tauczLower, tauczUpper = None, None
 
 # Load data
 header, obsData, fitData, rtoData = loadFit(path + "fitData.hdf5")
-method, regu_param, tol_grad, tauhe, dtauhe, taucz, dtaucz = header
+method, regu_param, tol_grad, n_guess, tauhe, dtauhe, taucz, dtaucz = header
 freq, num_of_n, delta_nu, vmin, vmax, freqDif2, icov = obsData
 param, chi2, reg, ier = fitData
 rtype, ratio = rtoData

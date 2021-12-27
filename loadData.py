@@ -75,6 +75,7 @@ def loadFit(filename):
         method = data['header/method'][()]
         regu_param = data['header/regu_param'][()]
         tol_grad = data['header/tol_grad'][()]
+        n_guess = data['header/n_guess'][()]
         try:
             tauhe = data['header/tauhe'][()]
         except KeyError:
@@ -118,7 +119,7 @@ def loadFit(filename):
             ratio = None
     
     # Group the data
-    header  = (method, regu_param, tol_grad, tauhe, dtauhe, taucz, dtaucz)
+    header  = (method, regu_param, tol_grad, n_guess, tauhe, dtauhe, taucz, dtaucz)
     obsData = (freq, num_of_n, delta_nu, vmin, vmax, freqDif2, icov)
     fitData = (param, chi2, reg, ier)
     rtoData = (rtype, ratio)
