@@ -76,20 +76,29 @@ path, stars = "./", ["16cyga"]
 
 
 
+# Print relevant input parameters
+print (70 * "=")
+print ("Method for glitch fitting: %s" %(method))
+print ("Regularization parameter: %0.1f" %(regu_param))
+print ("Absolute tolerance on gradients: %0.1e" %(tol_grad))
+print ("Number of attempts in global minimum search: %d" %(n_guess))
+print (70 * "=")
+
+
 # Loop over stars
 for star in stars:
     print ()
-    print ("Fit star %s using method %s..." %(star, method))
+    print ("Star name/id: %s" %(star))
+
 
     # Load observed oscillation frequencies
     filename = path + star + "/" + star + ".txt"
     if not os.path.isfile(filename):
         raise FileNotFoundError("Input frequency file not found %s!" %(filename))
     freq, num_of_mode, num_of_n, delta_nu = ld.loadFreq(filename, num_of_l)
-    print ('Total number of modes = %d' %(num_of_mode))
-    print ('Number of radial orders for each l = ', num_of_n)
-    print ('Large frequency separation = %.2f' %(delta_nu))
-
+    print ('Total number of observed modes: %d' %(num_of_mode))
+    print ('Number of radial orders for each degree:', num_of_n)
+    print ('Large frequency separation: %.2f microHz' %(delta_nu))
 
     # Compute second differences (if being fitted)
     num_of_dif2, freqDif2, icov = None, None, None
@@ -100,10 +109,12 @@ for star in stars:
             num_of_mode, 
             num_of_n
         )
-        print ('Total number of SDs = %d' %(num_of_dif2))
+        print ('Total number of SDs: %d' %(num_of_dif2))
     
     
     # Fit glitch signatures
+    print ()
+    print ("* Fitting data ... ", end="", flush=True)
     param, chi2, reg, ier, ratio = sg.fit(
         freq, 
         num_of_n, 
@@ -122,13 +133,13 @@ for star in stars:
         dtaucz=dtaucz,
         rtype=rtype
     )
+    print ("done!")
     param_rln, ier_rln = param[0:n_rln, :], ier[0:n_rln]
     param_rln = param_rln[ier_rln == 0, :]
     nfit_rln = param_rln.shape[0]
-    print ()
-    print ("Fit completed...")
-    print ("Total chi-square for the fit = %7.4f" %(chi2[-1]))
-    print ("Failed realizations = %d/%d" %(n_rln - nfit_rln, n_rln))
+    print ("Total chi-square for the fit: %7.4f" %(chi2[-1]))
+    print ("Failed realizations: %d/%d" %(n_rln - nfit_rln, n_rln))
+
 
     # Print Summary
     # --> Print average amplitude, acoustic depth and phase of CZ signature
@@ -146,22 +157,22 @@ for star in stars:
             method=method
         )
     Acz, AczNErr, AczPErr = sg.medianAndErrors(Acz_rln)
-    print ("Median Acz,  nerr,  perr = " + 3 * "%9.4f" %(Acz, AczNErr, AczPErr))
+    print ("Median Acz,  nerr,  perr:" + 3 * "%9.4f" %(Acz, AczNErr, AczPErr))
     Tcz, TczNErr, TczPErr = sg.medianAndErrors(param_rln[:, -6])
-    print ("Median Tcz,  nerr,  perr = " + 3 * "%9.1f" %(Tcz, TczNErr, TczPErr))
+    print ("Median Tcz,  nerr,  perr:" + 3 * "%9.1f" %(Tcz, TczNErr, TczPErr))
     Pcz, PczNErr, PczPErr = sg.medianAndErrors(param_rln[:, -5])
-    print ("Median Pcz,  nerr,  perr = " + 3 * "%9.4f" %(Pcz, PczNErr, PczPErr))
-    
+    print ("Median Pcz,  nerr,  perr:" + 3 * "%9.4f" %(Pcz, PczNErr, PczPErr))
+
     # Print average amplitude, acoustic width, acoustic depth and 
     # --> phase of He signature
     Ahe, AheNErr, AhePErr = sg.medianAndErrors(Ahe_rln)
-    print ("Median Ahe,  nerr,  perr = " + 3 * "%9.4f" %(Ahe, AheNErr, AhePErr))
+    print ("Median Ahe,  nerr,  perr:" + 3 * "%9.4f" %(Ahe, AheNErr, AhePErr))
     Dhe, DheNErr, DhePErr = sg.medianAndErrors(param_rln[:, -3])
-    print ("Median Dhe,  nerr,  perr = " + 3 * "%9.3f" %(Dhe, DheNErr, DhePErr))
+    print ("Median Dhe,  nerr,  perr:" + 3 * "%9.3f" %(Dhe, DheNErr, DhePErr))
     The, TheNErr, ThePErr = sg.medianAndErrors(param_rln[:, -2])
-    print ("Median The,  nerr,  perr = " + 3 * "%9.2f" %(The, TheNErr, ThePErr))
+    print ("Median The,  nerr,  perr:" + 3 * "%9.2f" %(The, TheNErr, ThePErr))
     Phe, PheNErr, PhePErr = sg.medianAndErrors(param_rln[:, -1])
-    print ("Median Phe,  nerr,  perr = " + 3 * "%9.4f" %(Phe, PheNErr, PhePErr))
+    print ("Median Phe,  nerr,  perr:" + 3 * "%9.4f" %(Phe, PheNErr, PhePErr))
     
     
     # Store data in a HDF5 file
