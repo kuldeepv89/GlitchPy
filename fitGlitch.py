@@ -6,7 +6,7 @@ import glob
 from sklearn.covariance import MinCovDet
 import loadData as ld
 import supportGlitch as sg
-import utils_seismic as su
+import utils_general as ug
 import plots
 
 
@@ -87,18 +87,18 @@ for star in stars:
         os.makedirs(outputdir)
     filename = outputdir + "log.txt"
     stdout = sys.stdout
-    sys.stdout = su.Logger(filename)
+    sys.stdout = ug.Logger(filename)
 
     # Print header
     print (88 * "=")
-    su.prt_center(
+    ug.prt_center(
         "FITTING SIGNATURES OF ACOUSTIC GLITCHES IN STELLAR OSCILLATION", 88
     )
-    su.prt_center(
+    ug.prt_center(
         "FREQUENCIES (FQ) AS WELL AS IN SECOND DIFFERENCES (SD)", 88
     )
     print ()
-    su.prt_center("https://github.com/kuldeepv89/glitch-fitting", 88)
+    ug.prt_center("https://github.com/kuldeepv89/glitch-fitting", 88)
     print (88 * "=")
 
     # Print star name/ID

@@ -7,7 +7,7 @@ from sd import sd
 from icov_sd import icov_sd
 from glitch_fq import fit_fq
 from glitch_sd import fit_sd
-import utils_seismic as su
+import utils_general as ug
 from copy import deepcopy
 
 
@@ -122,7 +122,7 @@ def fit(freq, num_of_n, delta_nu, num_of_dif2=None, freqDif2=None, icov=None,
         param[-1, :] = tmp
         # --> Ratios
         if rtype is not None:
-            tmp = su.specific_ratio(freq, rtype=rtype)
+            tmp = ug.specific_ratio(freq, rtype=rtype)
             ratio = np.zeros((n_rln+1, len(tmp)), dtype=float)
             ratio[-1, :] = tmp
         else:
@@ -148,7 +148,7 @@ def fit(freq, num_of_n, delta_nu, num_of_dif2=None, freqDif2=None, icov=None,
                 )
                 # --> Ratios
                 if rtype is not None:
-                    ratio[i, :] = su.specific_ratio(freq_rln, rtype=rtype)
+                    ratio[i, :] = ug.specific_ratio(freq_rln, rtype=rtype)
 
     # Fit second differences
     elif method.lower() == 'sd':
@@ -175,7 +175,7 @@ def fit(freq, num_of_n, delta_nu, num_of_dif2=None, freqDif2=None, icov=None,
         param[-1, :] = tmp
         # --> Ratios
         if rtype is not None:
-            tmp = su.specific_ratio(freq, rtype=rtype)
+            tmp = ug.specific_ratio(freq, rtype=rtype)
             ratio = np.zeros((n_rln+1, len(tmp)), dtype=float)
             ratio[-1, :] = tmp
         else:
@@ -202,7 +202,7 @@ def fit(freq, num_of_n, delta_nu, num_of_dif2=None, freqDif2=None, icov=None,
                 ) 
                 # --> Ratios
                 if rtype is not None:
-                    ratio[i, :] = su.specific_ratio(freq_rln, rtype=rtype)
+                    ratio[i, :] = ug.specific_ratio(freq_rln, rtype=rtype)
 
     else:
         raise ValueError ("Unrecognized fitting method %s!" %(method))
