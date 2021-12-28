@@ -44,8 +44,8 @@ if method.lower() == 'fq':
 elif method.lower() == 'sd':
     dof = freqDif2.shape[0] - npar
 if dof <= 0:
+    print ("WARNING: Degree of freedom %d <= 0! Setting it to 1..." %(dof))
     dof = 1
-    print ("WARNING: Degree of freedom <= 0! Setting it to 1...")
 rchi2 = chi2[-1] / dof
 
 # Compute average amplitudes

@@ -182,10 +182,10 @@ for star in stars:
     elif method.lower() == "sd":
         dof = freqDif2.shape[0] - npar
     if dof <= 0:
+        print ()
+        print ("WARNING: Degree of freedom %d <= 0! Setting it to 1..." %(dof))
+        print ()
         dof = 1
-        print ()
-        print ("WARNING: Degree of freedom <= 0! Setting it to 1...")
-        print ()
     rchi2 = chi2[-1] / dof
     print ()
     print ("The fit and related summary data:")
@@ -290,7 +290,24 @@ for star in stars:
             med[i] = np.median(grparams[:, i])
 
         # Covariance
+        j = int(round(nfit_rln / 2))
+        covtmp = MinCovDet().fit(grparams[0:j, :]).covariance_
         cov = MinCovDet().fit(grparams).covariance_
+
+        # Test convergence (change in standard deviations below a relative tolerance)
+        rdif = np.amax(
+            np.abs(
+                np.divide(
+                    np.sqrt(np.diag(covtmp)) - np.sqrt(np.diag(cov)), np.sqrt(np.diag(cov))
+                )
+            )
+        )
+        if rdif > 0.1:
+            print ()
+            print ("WARNING: Maximum relative difference %.2e > 0.1!" %(rdif))
+            print ()
+
+        # Plot correlations
         filename = outputdir + "correlations.png"  
         plots.plot_correlations(cov, filename=filename)
 
