@@ -1,6 +1,7 @@
 """
 Functions for frequency ratios calculations
 """
+import sys
 import numpy as np
 
 
@@ -269,3 +270,48 @@ def specific_ratio(frq, rtype="r012"):
         raise ValueError("Unrecognized ratio-type %s!" %(rtype))
     
     return ratio
+
+
+class Logger(object):
+    """
+    Class used to redefine stdout to terminal and an output file.
+
+    Parameters
+    ----------
+    outfilename : str
+        Absolute path to an output file
+    """
+
+    # Credit: http://stackoverflow.com/a/14906787
+    def __init__(self, outfilename):
+        self.terminal = sys.stdout
+        self.log = open(outfilename, "a")
+
+    def write(self, message):
+        self.terminal.write(message)
+        self.log.write(message)
+
+    def flush(self):
+        # this flush method is needed for python 3 compatibility.
+        # this handles the flush command by doing nothing.
+        # you might want to specify some extra behavior here.
+        pass
+
+
+def prt_center(text, llen):
+    """
+    Prints a centered line
+
+    Parameters
+    ----------
+    text : str
+        The text string to print
+
+    llen : int
+        Length of the line
+
+    Returns
+    -------
+    None
+    """
+    print("{0}{1}{0}".format(int((llen - len(text)) / 2) * " ", text))

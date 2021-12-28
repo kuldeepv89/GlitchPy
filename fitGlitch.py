@@ -1,12 +1,13 @@
-import numpy as np
 import os
 import sys
-import loadData as ld
-import supportGlitch as sg
-import plots
+import numpy as np
 import h5py
 import glob
 from sklearn.covariance import MinCovDet
+import loadData as ld
+import supportGlitch as sg
+import utils_seismic as su
+import plots
 
 
 
@@ -18,7 +19,7 @@ num_of_l = 3
 
 
 # Number of realizations
-n_rln = 10000 
+n_rln = 10000
 
 
 # Fitting method ("FQ" and "SD")
@@ -76,19 +77,33 @@ path, stars = "./", ["16cyga"]
 
 
 
-# Print relevant input parameters
-print (70 * "=")
-print ("Method for glitch fitting: %s" %(method))
-print ("Regularization parameter: %0.1f" %(regu_param))
-print ("Absolute tolerance on gradients: %0.1e" %(tol_grad))
-print ("Number of attempts in global minimum search: %d" %(n_guess))
-print (70 * "=")
-
-
 # Loop over stars
 for star in stars:
+
+
+    # Start the log file
+    outputdir = path + star + "/" + method + "/"
+    if not os.path.isdir(outputdir):
+        os.makedirs(outputdir)
+    filename = outputdir + "log.txt"
+    stdout = sys.stdout
+    sys.stdout = su.Logger(filename)
+
+    # Print header
+    print (88 * "=")
+    su.prt_center(
+        "FITTING SIGNATURES OF ACOUSTIC GLITCHES IN STELLAR OSCILLATION", 88
+    )
+    su.prt_center(
+        "FREQUENCIES (FQ) AS WELL AS IN SECOND DIFFERENCES (SD)", 88
+    )
     print ()
-    print ("Star name/id: %s" %(star))
+    su.prt_center("https://github.com/kuldeepv89/glitch-fitting", 88)
+    print (88 * "=")
+
+    # Print star name/ID
+    print ()
+    print ("Star name/ID: %s" %(star))
 
 
     # Load observed oscillation frequencies
@@ -96,11 +111,18 @@ for star in stars:
     if not os.path.isfile(filename):
         raise FileNotFoundError("Input frequency file not found %s!" %(filename))
     freq, num_of_mode, num_of_n, delta_nu = ld.loadFreq(filename, num_of_l)
-    print ('Total number of observed modes: %d' %(num_of_mode))
-    print ('Number of radial orders for each degree:', num_of_n)
-    print ('Large frequency separation: %.2f microHz' %(delta_nu))
+    if vmin is None:
+        vmin = np.amin(freq[:, 2])
+    if vmax is None:
+        vmax = np.amax(freq[:, 2])
+    print ()
+    print ("The observed data:")
+    print ("    - Total number of modes: %d" %(num_of_mode))
+    print ("    - Number of n for each l:", num_of_n)
+    print ("    - Frequency range for averaging: (%.2f, %.2f) muHz" %(vmin, vmax))
+    print ("    - Large separation: %.2f muHz" %(delta_nu))
 
-    # Compute second differences (if being fitted)
+    # Compute second differences (if necessary)
     num_of_dif2, freqDif2, icov = None, None, None
     if method.lower() == 'sd': 
         num_of_dif2, freqDif2, icov = sg.compDif2(
@@ -109,12 +131,29 @@ for star in stars:
             num_of_mode, 
             num_of_n
         )
-        print ('Total number of SDs: %d' %(num_of_dif2))
+        print ("    - Total number of SDs: %d" %(num_of_dif2))
     
-    
+
+    # Print fitting-method related information
+    print ()
+    print ("The fitting method and associated parameters:")
+    print ("    - Fitting method: %s" %(method))
+    print ("    - Regularization parameter: %.1f" %(regu_param))
+    print ("    - Absolute tolerance on gradients: %.1e" %(tol_grad))
+    print ("    - Number of attempts in global minimum search: %d" %(n_guess))
+
+    # Print miscellaneous information    
+    print ()
+    print ("Miscellaneous information:")
+    print ("    - tauhe, dtauhe: ({0}, {1})".format(tauhe, dtauhe))
+    print ("    - taucz, dtaucz: ({0}, {1})".format(taucz, dtaucz))
+    print ("    - Ratio type: {0}".format(rtype))
+    print ("    - Store median and covariance: {0}".format(medCov))
+
+
     # Fit glitch signatures
     print ()
-    print ("* Fitting data ... ", end="", flush=True)
+    print ("* Fitting data... ")
     param, chi2, reg, ier, ratio = sg.fit(
         freq, 
         num_of_n, 
@@ -133,20 +172,29 @@ for star in stars:
         dtaucz=dtaucz,
         rtype=rtype
     )
-    print ("done!")
+    print ("* Done!")
     param_rln, ier_rln = param[0:n_rln, :], ier[0:n_rln]
     param_rln = param_rln[ier_rln == 0, :]
     nfit_rln = param_rln.shape[0]
-    print ("Total chi-square for the fit: %7.4f" %(chi2[-1]))
-    print ("Failed realizations: %d/%d" %(n_rln - nfit_rln, n_rln))
+    npar = param.shape[1]
+    if method.lower() == "fq":
+        dof = freq.shape[0] - npar
+    elif method.lower() == "sd":
+        dof = freqDif2.shape[0] - npar
+    if dof <= 0:
+        dof = 1
+        print ()
+        print ("WARNING: Degree of freedom <= 0! Setting it to 1...")
+        print ()
+    rchi2 = chi2[-1] / dof
+    print ()
+    print ("The fit and related summary data:")
+    print ("    - Total and reduced chi-squares: (%.4f, %.4f)" %(chi2[-1], rchi2))
+    print ("    - Failed realizations: %d/%d" %(n_rln - nfit_rln, n_rln))
 
 
-    # Print Summary
+    # Print fitted glitch parameters with uncertainties 
     # --> Print average amplitude, acoustic depth and phase of CZ signature
-    if vmin is None:
-        vmin = np.amin(freq[:, 2])
-    if vmax is None:
-        vmax = np.amax(freq[:, 2])
     Acz_rln, Ahe_rln = np.zeros(nfit_rln), np.zeros(nfit_rln)
     for j in range(nfit_rln):
         Acz_rln[j], Ahe_rln[j] = sg.averageAmplitudes(
@@ -157,28 +205,39 @@ for star in stars:
             method=method
         )
     Acz, AczNErr, AczPErr = sg.medianAndErrors(Acz_rln)
-    print ("Median Acz,  nerr,  perr:" + 3 * "%9.4f" %(Acz, AczNErr, AczPErr))
+    print (
+        "    - Median Acz, nerr, perr: (%.4f, %.4f, %.4f)" %(Acz, AczNErr, AczPErr)
+    )
     Tcz, TczNErr, TczPErr = sg.medianAndErrors(param_rln[:, -6])
-    print ("Median Tcz,  nerr,  perr:" + 3 * "%9.1f" %(Tcz, TczNErr, TczPErr))
+    print (
+        "    - Median Tcz, nerr, perr: (%.1f, %.1f, %.1f)" %(Tcz, TczNErr, TczPErr)
+    )
     Pcz, PczNErr, PczPErr = sg.medianAndErrors(param_rln[:, -5])
-    print ("Median Pcz,  nerr,  perr:" + 3 * "%9.4f" %(Pcz, PczNErr, PczPErr))
+    print (
+        "    - Median Pcz, nerr, perr: (%.4f, %.4f, %.4f)" %(Pcz, PczNErr, PczPErr)
+    )
 
     # Print average amplitude, acoustic width, acoustic depth and 
     # --> phase of He signature
     Ahe, AheNErr, AhePErr = sg.medianAndErrors(Ahe_rln)
-    print ("Median Ahe,  nerr,  perr:" + 3 * "%9.4f" %(Ahe, AheNErr, AhePErr))
+    print (
+        "    - Median Ahe, nerr, perr: (%.4f, %.4f, %.4f)" %(Ahe, AheNErr, AhePErr)
+    )
     Dhe, DheNErr, DhePErr = sg.medianAndErrors(param_rln[:, -3])
-    print ("Median Dhe,  nerr,  perr:" + 3 * "%9.3f" %(Dhe, DheNErr, DhePErr))
+    print (
+        "    - Median Dhe, nerr, perr: (%.3f, %.3f, %.3f)" %(Dhe, DheNErr, DhePErr)
+    )
     The, TheNErr, ThePErr = sg.medianAndErrors(param_rln[:, -2])
-    print ("Median The,  nerr,  perr:" + 3 * "%9.2f" %(The, TheNErr, ThePErr))
+    print (
+        "    - Median The, nerr, perr: (%.2f, %.2f, %.2f)" %(The, TheNErr, ThePErr)
+    )
     Phe, PheNErr, PhePErr = sg.medianAndErrors(param_rln[:, -1])
-    print ("Median Phe,  nerr,  perr:" + 3 * "%9.4f" %(Phe, PheNErr, PhePErr))
+    print (
+        "    - Median Phe, nerr, perr: (%.4f, %.4f, %.4f)" %(Phe, PheNErr, PhePErr)
+    )
     
     
-    # Store data in a HDF5 file
-    outputdir = path + star + "/" + method + "/"
-    if not os.path.isdir(outputdir):
-        os.makedirs(outputdir)
+    # Store all the data in a HDF5 file
     filename = outputdir + "fitData.hdf5"  
     if os.path.isfile(filename):
         os.remove(filename)
@@ -213,7 +272,7 @@ for star in stars:
             f.create_dataset('rto/ratio', data=ratio)
 
 
-    # Store median and covariance in a HDF5 file
+    # Store median and covariance matrix in a HDF5 file (if necessary)
     if medCov:
         grparams = np.zeros((nfit_rln, 3))
         grparams[:, 0], grparams[:, 1], grparams[:, 2] = (
@@ -269,5 +328,5 @@ for star in stars:
                 raise ValueError("Unrecognized ratio-type %s!" %(rtype))
 
 
-    # Generate plots summarizing the fit
+    # Finally generate plots summarizing the fit
     plots.plot_fitSummary(outputdir)
