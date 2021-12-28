@@ -304,7 +304,10 @@ for star in stars:
         )
         if rdif > 0.1:
             print ()
-            print ("WARNING: Maximum relative difference %.2e > 0.1!" %(rdif))
+            print (
+                "WARNING: Maximum relative difference %.2e > 0.1! " 
+                "Check covariance..." %(rdif)
+            )
             print ()
 
         # Plot correlations
