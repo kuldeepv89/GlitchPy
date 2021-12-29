@@ -19,7 +19,7 @@ num_of_l = 3
 
 
 # Number of realizations
-n_rln = 10000
+n_rln = 1000
 
 
 # Fitting method ("FQ" and "SD")
@@ -117,10 +117,10 @@ for star in stars:
         vmax = np.amax(freq[:, 2])
     print ()
     print ("The observed data:")
-    print ("    - Total number of modes: %d" %(num_of_mode))
-    print ("    - Number of n for each l:", num_of_n)
-    print ("    - Frequency range for averaging: (%.2f, %.2f) muHz" %(vmin, vmax))
-    print ("    - Large separation: %.2f muHz" %(delta_nu))
+    print ("    - total number of modes: %d" %(num_of_mode))
+    print ("    - number of n for each l:", num_of_n)
+    print ("    - frequency range for averaging: (%.2f, %.2f) muHz" %(vmin, vmax))
+    print ("    - large separation: %.2f muHz" %(delta_nu))
 
     # Compute second differences (if necessary)
     num_of_dif2, freqDif2, icov = None, None, None
@@ -131,24 +131,24 @@ for star in stars:
             num_of_mode, 
             num_of_n
         )
-        print ("    - Total number of SDs: %d" %(num_of_dif2))
+        print ("    - total number of SDs: %d" %(num_of_dif2))
     
 
     # Print fitting-method related information
     print ()
     print ("The fitting method and associated parameters:")
-    print ("    - Fitting method: %s" %(method))
-    print ("    - Regularization parameter: %.1f" %(regu_param))
-    print ("    - Absolute tolerance on gradients: %.1e" %(tol_grad))
-    print ("    - Number of attempts in global minimum search: %d" %(n_guess))
+    print ("    - fitting method: %s" %(method))
+    print ("    - regularization parameter: %.1f" %(regu_param))
+    print ("    - absolute tolerance on gradients: %.1e" %(tol_grad))
+    print ("    - number of attempts in global minimum search: %d" %(n_guess))
 
     # Print miscellaneous information    
     print ()
     print ("Miscellaneous information:")
     print ("    - tauhe, dtauhe: ({0}, {1})".format(tauhe, dtauhe))
     print ("    - taucz, dtaucz: ({0}, {1})".format(taucz, dtaucz))
-    print ("    - Ratio type: {0}".format(rtype))
-    print ("    - Store median and covariance: {0}".format(medCov))
+    print ("    - ratio type: {0}".format(rtype))
+    print ("    - store median and covariance: {0}".format(medCov))
 
 
     # Fit glitch signatures
@@ -189,8 +189,8 @@ for star in stars:
     rchi2 = chi2[-1] / dof
     print ()
     print ("The fit and related summary data:")
-    print ("    - Total and reduced chi-squares: (%.4f, %.4f)" %(chi2[-1], rchi2))
-    print ("    - Failed realizations: %d/%d" %(n_rln - nfit_rln, n_rln))
+    print ("    - total and reduced chi-squares: (%.4f, %.4f)" %(chi2[-1], rchi2))
+    print ("    - failed realizations: %d/%d" %(n_rln - nfit_rln, n_rln))
 
 
     # Print fitted glitch parameters with uncertainties 
@@ -206,34 +206,34 @@ for star in stars:
         )
     Acz, AczNErr, AczPErr = sg.medianAndErrors(Acz_rln)
     print (
-        "    - Median Acz, nerr, perr: (%.4f, %.4f, %.4f)" %(Acz, AczNErr, AczPErr)
+        "    - median Acz, nerr, perr: (%.4f, %.4f, %.4f)" %(Acz, AczNErr, AczPErr)
     )
     Tcz, TczNErr, TczPErr = sg.medianAndErrors(param_rln[:, -6])
     print (
-        "    - Median Tcz, nerr, perr: (%.1f, %.1f, %.1f)" %(Tcz, TczNErr, TczPErr)
+        "    - median Tcz, nerr, perr: (%.1f, %.1f, %.1f)" %(Tcz, TczNErr, TczPErr)
     )
     Pcz, PczNErr, PczPErr = sg.medianAndErrors(param_rln[:, -5])
     print (
-        "    - Median Pcz, nerr, perr: (%.4f, %.4f, %.4f)" %(Pcz, PczNErr, PczPErr)
+        "    - median Pcz, nerr, perr: (%.4f, %.4f, %.4f)" %(Pcz, PczNErr, PczPErr)
     )
 
     # Print average amplitude, acoustic width, acoustic depth and 
     # --> phase of He signature
     Ahe, AheNErr, AhePErr = sg.medianAndErrors(Ahe_rln)
     print (
-        "    - Median Ahe, nerr, perr: (%.4f, %.4f, %.4f)" %(Ahe, AheNErr, AhePErr)
+        "    - median Ahe, nerr, perr: (%.4f, %.4f, %.4f)" %(Ahe, AheNErr, AhePErr)
     )
     Dhe, DheNErr, DhePErr = sg.medianAndErrors(param_rln[:, -3])
     print (
-        "    - Median Dhe, nerr, perr: (%.3f, %.3f, %.3f)" %(Dhe, DheNErr, DhePErr)
+        "    - median Dhe, nerr, perr: (%.3f, %.3f, %.3f)" %(Dhe, DheNErr, DhePErr)
     )
     The, TheNErr, ThePErr = sg.medianAndErrors(param_rln[:, -2])
     print (
-        "    - Median The, nerr, perr: (%.2f, %.2f, %.2f)" %(The, TheNErr, ThePErr)
+        "    - median The, nerr, perr: (%.2f, %.2f, %.2f)" %(The, TheNErr, ThePErr)
     )
     Phe, PheNErr, PhePErr = sg.medianAndErrors(param_rln[:, -1])
     print (
-        "    - Median Phe, nerr, perr: (%.4f, %.4f, %.4f)" %(Phe, PheNErr, PhePErr)
+        "    - median Phe, nerr, perr: (%.4f, %.4f, %.4f)" %(Phe, PheNErr, PhePErr)
     )
     
     
@@ -283,12 +283,6 @@ for star in stars:
             ratio_rln = ratio_rln[ier_rln == 0, :]
             grparams = np.hstack((ratio_rln, grparams))
 
-        # Median
-        ngr = grparams.shape[1]
-        med = np.zeros(ngr)
-        for i in range(ngr):
-            med[i] = np.median(grparams[:, i])
-
         # Covariance
         j = int(round(nfit_rln / 2))
         covtmp = MinCovDet().fit(grparams[0:j, :]).covariance_
@@ -309,6 +303,32 @@ for star in stars:
                 "Check covariance..." %(rdif)
             )
             print ()
+
+        # Median
+        norder, frq, rto = ug.specific_ratio(freq, rtype=rtype)
+        ngr = grparams.shape[1]
+        med = np.zeros(ngr)
+        print ()
+        print ("The observables with uncertainties from covariance matrix:")
+        for i in range(ngr):
+            med[i] = np.median(grparams[:, i])
+            if i < ngr - 3:
+                print (
+                    "    - n, freq, median ratio, err: (%d, %.2f, %.5f, %.5f)" 
+                    %(round(norder[i]), frq[i], rto[i], np.sqrt(cov[i, i]))
+                )
+            elif i == ngr - 3:
+                print (
+                    "    - median Ahe, err: (%.4f, %.4f)" %(med[i], np.sqrt(cov[i, i]))
+                )
+            elif i == ngr - 2:
+                print (
+                    "    - median Dhe, err: (%.3f, %.3f)" %(med[i], np.sqrt(cov[i, i]))
+                )
+            elif i == ngr - 1:
+                print (
+                    "    - median The, err: (%.2f, %.2f)" %(med[i], np.sqrt(cov[i, i]))
+                )
 
         # Plot correlations
         filename = outputdir + "correlations.png"  
