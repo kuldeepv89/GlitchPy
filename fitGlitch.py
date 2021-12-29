@@ -112,14 +112,18 @@ for star in stars:
         raise FileNotFoundError("Input frequency file not found %s!" %(filename))
     freq, num_of_mode, num_of_n, delta_nu = ld.loadFreq(filename, num_of_l)
     if vmin is None:
-        vmin = np.amin(freq[:, 2])
+        nu_min = np.amin(freq[:, 2])
+    else:
+        nu_min = vmin
     if vmax is None:
-        vmax = np.amax(freq[:, 2])
+        nu_max = np.amax(freq[:, 2])
+    else:
+        nu_max = vmax
     print ()
     print ("The observed data:")
     print ("    - total number of modes: %d" %(num_of_mode))
     print ("    - number of n for each l:", num_of_n)
-    print ("    - frequency range for averaging: (%.2f, %.2f) muHz" %(vmin, vmax))
+    print ("    - frequency range for averaging: (%.2f, %.2f) muHz" %(nu_min, nu_max))
     print ("    - large separation: %.2f muHz" %(delta_nu))
 
     # Compute second differences (if necessary)
@@ -199,8 +203,8 @@ for star in stars:
     for j in range(nfit_rln):
         Acz_rln[j], Ahe_rln[j] = sg.averageAmplitudes(
             param_rln[j, :], 
-            vmin, 
-            vmax, 
+            nu_min, 
+            nu_max, 
             delta_nu=delta_nu, 
             method=method
         )
@@ -257,8 +261,8 @@ for star in stars:
         f.create_dataset('obs/freq', data=freq)
         f.create_dataset('obs/num_of_n', data=num_of_n)
         f.create_dataset('obs/delta_nu', data=delta_nu)
-        f.create_dataset('obs/vmin', data=vmin)
-        f.create_dataset('obs/vmax', data=vmax)
+        f.create_dataset('obs/vmin', data=nu_min)
+        f.create_dataset('obs/vmax', data=nu_max)
         if freqDif2 is not None:
             f.create_dataset('obs/freqDif2', data=freqDif2)
         if icov is not None:
@@ -370,3 +374,7 @@ for star in stars:
 
     # Finally generate plots summarizing the fit
     plots.plot_fitSummary(outputdir)
+
+
+    # Save log file
+    sys.stdout = stdout
