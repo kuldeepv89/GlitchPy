@@ -54,11 +54,11 @@ def plot_fitSummary(path):
     # Initial guesses for various acoutic depths 
     acousticRadius = 5.e5 / delta_nu
     if tauhe is None:
-        tauhe = 0.16 * acousticRadius + 48.
+        tauhe = 0.17 * acousticRadius + 18.
     if dtauhe is None:
         dtauhe = 0.05 * acousticRadius
     if taucz is None:
-        taucz = 0.37 * acousticRadius + 900.
+        taucz = 0.34 * acousticRadius + 929.
     if dtaucz is None:
         dtaucz = 0.10 * acousticRadius
 

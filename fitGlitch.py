@@ -14,16 +14,35 @@ import plots
 #-----------------------------------------------------------------------------------------
 # Set the following parameters/path/stars appropriately
 #-----------------------------------------------------------------------------------------
-# Number of harmonic degree
+# Path and star names
+# --> For each "star" in the list "stars" below, assume input frequency 
+# file name to be stars.txt, which is present in the folder path/star/
+# --> Output results go to the folder path/star/
+path = "/Users/au572692/gitProjects/glitch-fitting/"
+stars = ["16cyga"]
+
+
+# Number of harmonic degrees to read from the data file starting from l = 0
+# i.e. if num_of_l = 1, read only l = 0 modes
 num_of_l = 3 
 
 
-# Number of realizations
+# Number of realizations to fit for uncertainties/covariance matrix estimation
 n_rln = 1000
 
 
-# Fitting method ("FQ" and "SD")
+# Fitting method (frequencies: "FQ", and second differences: "SD")
 method = "FQ"
+
+
+# Number of parameters in the smooth component (degree of the polynomial + 1)
+# --> 5 and 3 works well for "FQ" and "SD", respectively
+npoly_params = 5
+
+
+# Order of derivative used in the regularization 
+# --> 3 and 1 works well for "FQ" and "SD", respectively
+nderiv = 3
 
 
 # Regularization parameter
@@ -31,7 +50,7 @@ method = "FQ"
 regu_param = 7.
 
 
-# Absolute tolerance on gradient
+# Absolute tolerance on gradients during the optimization
 tol_grad = 1e-3
 
 
@@ -42,14 +61,14 @@ n_guess = 200
 
 # Initial guess for the range of acoustic depth of HeIZ 
 # --> range : [tauhe - dtauhe, tauhe + dtauhe]
-# --> If tauhe = None, tauhe = 0.16 * acousticRadius + 48
+# --> If tauhe = None, tauhe = 0.17 * acousticRadius + 18
 # --> If dtauhe = None, dtauhe = 0.05 * acousticRadius
 tauhe, dtauhe = None, None
 
 
 # Initial guess for the range of acoustic depth of BCZ 
 # --> range : [taucz - dtaucz, taucz + dtaucz]
-# --> If taucz = None, taucz = 0.37 * acousticRadius + 900.
+# --> If taucz = None, taucz = 0.34 * acousticRadius + 929.
 # --> If dtaucz = None, dtaucz = 0.10 * acousticRadius
 taucz, dtaucz = None, None
 
@@ -61,18 +80,12 @@ vmin, vmax = None, None
 
 
 # Ratio type ("r01", "r10", "r02", "r010", "r012", "r102")
-rtype = "r012"
+# --> If rtype = None, calculate only glitch properties (ignore ratios)
+rtype = None 
 
 
 # Store median values and covariance matrix
 medCov = True
-
-
-# Path and star names
-# --> For each "star" in the list "stars" below, assume input frequency 
-# file name to be stars.txt, which is present in the folder path/star/
-# --> Output results go to the folder path/star/
-path, stars = "./", ["16cyga"]
 #-----------------------------------------------------------------------------------------
 
 
@@ -142,6 +155,8 @@ for star in stars:
     print ()
     print ("The fitting method and associated parameters:")
     print ("    - fitting method: %s" %(method))
+    print ("    - degree of polynomial for smooth component: %d" %(npoly_params - 1))
+    print ("    - order of derivative in regularization: %d" %(nderiv))
     print ("    - regularization parameter: %.1f" %(regu_param))
     print ("    - absolute tolerance on gradients: %.1e" %(tol_grad))
     print ("    - number of attempts in global minimum search: %d" %(n_guess))
@@ -166,7 +181,9 @@ for star in stars:
         freqDif2=freqDif2, 
         icov=icov, 
         method=method, 
-        n_rln=n_rln, 
+        n_rln=n_rln,
+        npoly_params=npoly_params,
+        nderiv=nderiv, 
         tol_grad=tol_grad, 
         regu_param=regu_param, 
         n_guess=n_guess, 
@@ -309,29 +326,23 @@ for star in stars:
             print ()
 
         # Median
-        norder, frq, rto = ug.specific_ratio(freq, rtype=rtype)
-        ngr = grparams.shape[1]
-        med = np.zeros(ngr)
         print ()
         print ("The observables with uncertainties from covariance matrix:")
-        for i in range(ngr):
-            med[i] = np.median(grparams[:, i])
-            if i < ngr - 3:
+        ngr = grparams.shape[1]
+        med = np.zeros(ngr)
+        med[-3] = np.median(grparams[:, -3])
+        print ("    - median Ahe, err: (%.4f, %.4f)" %(med[-3], np.sqrt(cov[-3, -3])))
+        med[-2] = np.median(grparams[:, -2])
+        print ("    - median Dhe, err: (%.3f, %.3f)" %(med[-2], np.sqrt(cov[-2, -2])))
+        med[-1] = np.median(grparams[:, -1])
+        print ("    - median The, err: (%.2f, %.2f)" %(med[-1], np.sqrt(cov[-1, -1])))
+        if rtype is not None:
+            norder, frq, rto = ug.specific_ratio(freq, rtype=rtype)
+            for i in range(ngr-3):
+                med[i] = np.median(grparams[:, i])
                 print (
-                    "    - n, freq, median ratio, err: (%d, %.2f, %.5f, %.5f)" 
-                    %(round(norder[i]), frq[i], rto[i], np.sqrt(cov[i, i]))
-                )
-            elif i == ngr - 3:
-                print (
-                    "    - median Ahe, err: (%.4f, %.4f)" %(med[i], np.sqrt(cov[i, i]))
-                )
-            elif i == ngr - 2:
-                print (
-                    "    - median Dhe, err: (%.3f, %.3f)" %(med[i], np.sqrt(cov[i, i]))
-                )
-            elif i == ngr - 1:
-                print (
-                    "    - median The, err: (%.2f, %.2f)" %(med[i], np.sqrt(cov[i, i]))
+                    "    - n, freq, median ratio, err: (%d, %.2f, %.5f, %.5f, %.5f)" 
+                    %(round(norder[i]), frq[i], rto[i], med[i], np.sqrt(cov[i, i]))
                 )
 
         # Plot correlations

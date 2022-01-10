@@ -14,8 +14,9 @@ from copy import deepcopy
 
 #-----------------------------------------------------------------------------------------
 def fit(freq, num_of_n, delta_nu, num_of_dif2=None, freqDif2=None, icov=None, 
-        method='FQ', n_rln=1000, tol_grad=1e-3, regu_param=7., n_guess=200, 
-        tauhe=None, dtauhe=None, taucz=None, dtaucz=None, rtype=None):
+        method='FQ', n_rln=1000, npoly_params=5, nderiv=3, tol_grad=1e-3, 
+        regu_param=7., n_guess=200, tauhe=None, dtauhe=None, taucz=None, 
+        dtaucz=None, rtype=None):
     '''
     Fit glitch signatures 
 
@@ -40,6 +41,12 @@ def fit(freq, num_of_n, delta_nu, num_of_dif2=None, freqDif2=None, icov=None,
         Fitting method ('FQ' or 'SD')
     n_rln : int
         Number of realizations. If n_rln = 0, just fit the original frequencies/differences
+    npoly_params : int
+        Number of parameters in the smooth component (5 and 3 generally work well for 'FQ' 
+        and 'SD', respectively)
+    nderiv : int
+        Order of derivative used in the regularization (3 and 1 generally work well for 
+        'FQ' and 'SD', respectively)
     tol_grad : float
         tolerance on gradients (typically between 1e-2 and 1e-5 depending on quality
         of data and 'method' used)
@@ -51,7 +58,7 @@ def fit(freq, num_of_n, delta_nu, num_of_dif2=None, freqDif2=None, icov=None,
     tauhe : float, optional
         Determines the range in acoustic depth (s) of He glitch for global minimum 
         search (tauhe - dtauhe, tauhe + dtauhe). 
-        If tauhe = None, tauhe = 0.16 * acousticRadius + 48 
+        If tauhe = None, tauhe = 0.17 * acousticRadius + 18 
     dtauhe : float, optional
         Determines the range in acoustic depth (s) of He glitch for global minimum 
         search (tauhe - dtauhe, tauhe + dtauhe). 
@@ -59,7 +66,7 @@ def fit(freq, num_of_n, delta_nu, num_of_dif2=None, freqDif2=None, icov=None,
     taucz : float, optional
         Determines the range in acoustic depth (s) of CZ glitch for global minimum 
         search (taucz - dtaucz, taucz + dtaucz). 
-        If taucz = None, taucz = 0.37 * acousticRadius + 900
+        If taucz = None, taucz = 0.34 * acousticRadius + 929
     dtaucz : float, optional
         Determines the range in acoustic depth (s) of CZ glitch for global minimum 
         search (taucz - dtaucz, taucz + dtaucz). 
@@ -88,11 +95,11 @@ def fit(freq, num_of_n, delta_nu, num_of_dif2=None, freqDif2=None, icov=None,
     # Initialize acoutic depths (if they are None)
     acousticRadius = 5.e5 / delta_nu
     if tauhe is None:
-        tauhe = 0.16 * acousticRadius + 48.
+        tauhe = 0.17 * acousticRadius + 18.
     if dtauhe is None:
         dtauhe = 0.05 * acousticRadius
     if taucz is None:
-        taucz = 0.37 * acousticRadius + 900.
+        taucz = 0.34 * acousticRadius + 929.
     if dtaucz is None:
         dtaucz = 0.10 * acousticRadius    
 
@@ -104,6 +111,9 @@ def fit(freq, num_of_n, delta_nu, num_of_dif2=None, freqDif2=None, icov=None,
     # Fit oscillation frequencies
     if method.lower() == 'fq': 
 
+        # Total number of fitting parameters
+        nparams = len(num_of_n) * npoly_params + 7
+
         # Fit original data
         # --> Glitches
         tmp, chi2[-1], reg[-1], ier[-1] = fit_fq(
@@ -114,6 +124,9 @@ def fit(freq, num_of_n, delta_nu, num_of_dif2=None, freqDif2=None, icov=None,
             dtauhe, 
             taucz, 
             dtaucz, 
+            npoly_fq=npoly_params,
+            total_num_of_param_fq=nparams,
+            nderiv_fq=nderiv,
             tol_grad_fq=tol_grad, 
             regu_param_fq=regu_param, 
             num_guess=n_guess
@@ -142,6 +155,9 @@ def fit(freq, num_of_n, delta_nu, num_of_dif2=None, freqDif2=None, icov=None,
                     dtauhe, 
                     taucz, 
                     dtaucz, 
+                    npoly_fq=npoly_params,
+                    total_num_of_param_fq=nparams,
+                    nderiv_fq=nderiv,
                     tol_grad_fq=tol_grad, 
                     regu_param_fq=regu_param, 
                     num_guess=n_guess
@@ -157,6 +173,9 @@ def fit(freq, num_of_n, delta_nu, num_of_dif2=None, freqDif2=None, icov=None,
                 "num_of_dif2, freqDif2, icov cannot be None for SD!"
             )
 
+        # Total number of fitting parameters
+        nparams = npoly_params + 7
+
         # Fit original data
         # --> Glitches
         tmp, chi2[-1], reg[-1], ier[-1] = fit_sd(
@@ -167,6 +186,9 @@ def fit(freq, num_of_n, delta_nu, num_of_dif2=None, freqDif2=None, icov=None,
             dtauhe, 
             taucz, 
             dtaucz, 
+            npoly_sd=npoly_params,
+            total_num_of_param_sd=nparams,
+            nderiv_sd=nderiv,
             tol_grad_sd=tol_grad, 
             regu_param_sd=regu_param, 
             num_guess=n_guess
@@ -196,6 +218,9 @@ def fit(freq, num_of_n, delta_nu, num_of_dif2=None, freqDif2=None, icov=None,
                     dtauhe, 
                     taucz, 
                     dtaucz, 
+                    npoly_sd=npoly_params,
+                    total_num_of_param_sd=nparams,
+                    nderiv_sd=nderiv,
                     tol_grad_sd=tol_grad,
                     regu_param_sd=regu_param, 
                     num_guess=n_guess
