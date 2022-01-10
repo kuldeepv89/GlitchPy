@@ -18,7 +18,7 @@ import plots
 # --> For each "star" in the list "stars" below, assume input frequency 
 # file name to be stars.txt, which is present in the folder path/star/
 # --> Output results go to the folder path/star/
-path = "/Users/au572692/gitProjects/glitch-fitting/"
+path = "/Users/au572692/gitProjects/GlitchPy/"
 stars = ["16cyga"]
 
 
