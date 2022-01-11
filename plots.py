@@ -1,7 +1,6 @@
-import sys
 import numpy as np
-from loadData import loadFit
 import supportGlitch as sg
+import utils_general as ug
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator, FormatStrFormatter
@@ -26,7 +25,7 @@ def plot_fitSummary(path):
 #-----------------------------------------------------------------------------------------
 
     # Load data
-    header, obsData, fitData, rtoData = loadFit(path + "fitData.hdf5")
+    header, obsData, fitData, rtoData = ug.loadFit(path + "fitData.hdf5")
     method, regu_param, tol_grad, n_guess, tauhe, dtauhe, taucz, dtaucz = header
     freq, num_of_n, delta_nu, vmin, vmax, freqDif2, icov = obsData
     param, chi2, reg, ier = fitData
@@ -183,7 +182,7 @@ def plot_fitSummary(path):
     ax1 = fig.add_subplot(221)
     ax1.set_rasterization_zorder(-1)
     
-    Ahe, AheNErr, AhePErr = sg.medianAndErrors(Ahe_rln)
+    Ahe, AheNErr, AhePErr = ug.medianAndErrors(Ahe_rln)
     xmin = max(0., Ahe - 10. * AheNErr)
     xmax = Ahe + 10. * AhePErr 
 
@@ -218,7 +217,7 @@ def plot_fitSummary(path):
     ax2 = fig.add_subplot(222)
     ax2.set_rasterization_zorder(-1)
     
-    Dhe, DheNErr, DhePErr = sg.medianAndErrors(param_rln[:, -3])
+    Dhe, DheNErr, DhePErr = ug.medianAndErrors(param_rln[:, -3])
     xmin = max(0., Dhe - 10. * DheNErr)
     xmax = min(acousticRadius, Dhe + 10. * DhePErr)
 
@@ -251,7 +250,7 @@ def plot_fitSummary(path):
     ax3 = fig.add_subplot(223)
     ax3.set_rasterization_zorder(-1)
     
-    The, TheNErr, ThePErr = sg.medianAndErrors(param_rln[:, -2])
+    The, TheNErr, ThePErr = ug.medianAndErrors(param_rln[:, -2])
     xmin = max(0., The - 10. * TheNErr)
     xmax = min(acousticRadius, The + 10. * ThePErr)
 
@@ -330,7 +329,7 @@ def plot_fitSummary(path):
     ax1 = fig.add_subplot(311)
     ax1.set_rasterization_zorder(-1)
     
-    Acz, AczNErr, AczPErr = sg.medianAndErrors(Acz_rln)
+    Acz, AczNErr, AczPErr = ug.medianAndErrors(Acz_rln)
     xmin = max(0., Acz - 10. * AczNErr)
     xmax = Acz + 10. * AczPErr 
 
@@ -368,7 +367,7 @@ def plot_fitSummary(path):
     ax2 = fig.add_subplot(312)
     ax2.set_rasterization_zorder(-1)
     
-    Tcz, TczNErr, TczPErr = sg.medianAndErrors(param_rln[:, -6])
+    Tcz, TczNErr, TczPErr = ug.medianAndErrors(param_rln[:, -6])
     xmin = max(0., Tcz - 10. * TczNErr)
     xmax = min(acousticRadius, Tcz + 10. * TczPErr)
 
@@ -438,6 +437,51 @@ def plot_fitSummary(path):
 
 
 #-----------------------------------------------------------------------------------------
+def plot_correlations(cov, filename="./correlations.png"):
+    """
+    Plot correlation matrix 
+
+    Parameters
+    ----------
+    cov : array
+        Covariance matrix
+    filename : str
+        File name (including full path) for the plot
+
+    Return
+    ------
+    A heatmap plot
+    """
+#-----------------------------------------------------------------------------------------
+
+    # Compute the correlation matrix
+    cor = ug.correlation_from_covariance(cov)
+    n = cor.shape[0]
+    
+
+    fig = plt.figure()
+    sns.set(rc={'text.usetex' : True})
+    sns.set_style("ticks")
+    fig.subplots_adjust(bottom=0.15, right=0.95, top=0.95, left=0.15)
+    ax = fig.add_subplot(111)
+    ax.set_rasterization_zorder(-1)
+    
+    ax = sns.heatmap(
+        cor, vmin=-1, vmax=1, linewidths=0, linecolor='white', cmap=None, 
+        center=0, square=True
+    )
+    
+    plt.xlim(0, n)
+    plt.ylim(n, 0)
+    
+    plt.savefig(filename, dpi=400, bbox_inches='tight')
+    plt.close(fig)
+
+    return
+
+
+
+#-----------------------------------------------------------------------------------------
 def majMinTick(xmin, xmax, nxmajor=7, nxminor=5):
     '''
     Calculate step sizes for major and minor tick levels
@@ -466,74 +510,3 @@ def majMinTick(xmin, xmax, nxmajor=7, nxminor=5):
     xminor = xmajor / nxminor
 
     return xmajor, xminor
-
-
-
-#-----------------------------------------------------------------------------------------
-def plot_correlations(cov, filename="./correlations.png"):
-    """
-    Plot correlation matrix 
-
-    Parameters
-    ----------
-    cov : array
-        Covariance matrix
-    filename : str
-        File name (including full path) for the plot
-
-    Return
-    ------
-    A heatmap plot
-    """
-#-----------------------------------------------------------------------------------------
-
-    # Compute the correlation matrix
-    cor = correlation_from_covariance(cov)
-    n = cor.shape[0]
-    
-
-    fig = plt.figure()
-    sns.set(rc={'text.usetex' : True})
-    sns.set_style("ticks")
-    fig.subplots_adjust(bottom=0.15, right=0.95, top=0.95, left=0.15)
-    ax = fig.add_subplot(111)
-    ax.set_rasterization_zorder(-1)
-    
-    ax = sns.heatmap(
-        cor, vmin=-1, vmax=1, linewidths=0, linecolor='white', cmap=None, 
-        center=0, square=True
-    )
-    
-    plt.xlim(0, n)
-    plt.ylim(n, 0)
-    
-    plt.savefig(filename, dpi=400, bbox_inches='tight')
-    plt.close(fig)
-
-    return
-
-
-
-#-----------------------------------------------------------------------------------------
-def correlation_from_covariance(cov):
-    """
-    Compute correlation matrix from covariance matrix
-
-    Parameters
-    ----------
-    cov : array
-        Covariance matrix
-
-    Return
-    ------
-    cor : array
-        Correlation matrix
-    """
-#-----------------------------------------------------------------------------------------
-
-    v = np.sqrt(np.diag(cov))
-    outer_v = np.outer(v, v)
-    cor = cov / outer_v
-    cor[cov == 0] = 0
-
-    return cor

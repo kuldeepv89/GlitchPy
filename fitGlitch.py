@@ -2,9 +2,7 @@ import os
 import sys
 import numpy as np
 import h5py
-import glob
 from sklearn.covariance import MinCovDet
-import loadData as ld
 import supportGlitch as sg
 import utils_general as ug
 import plots
@@ -16,14 +14,15 @@ import plots
 #-----------------------------------------------------------------------------------------
 # Path and star names
 # --> For each "star" in the list "stars" below, assume input frequency 
-# file name to be stars.txt, which is present in the folder path/star/
-# --> Output results go to the folder path/star/
+#     file name to be stars.txt, which is present in the folder path/star/
+# --> Output results go to the folder path/star/method/ (where method is 
+#     either FQ or SD, see below)
 path = "/Users/au572692/gitProjects/GlitchPy/"
 stars = ["16cyga"]
 
 
-# Number of harmonic degrees to read from the data file starting from l = 0
-# i.e. if num_of_l = 1, read only l = 0 modes
+# Number of harmonic degrees to read from the data file starting from the
+#    radial modes (i.e. if num_of_l = 1, read only l = 0 modes)
 num_of_l = 3 
 
 
@@ -54,28 +53,29 @@ regu_param = 7.
 tol_grad = 1e-3
 
 
-# Number of initial guesses to explore the parameter space 
-# --> for finding the global minimum 
+# Number of initial guesses to explore the parameter space for finding 
+#    the global minimum 
 n_guess = 200
 
 
 # Initial guess for the range of acoustic depth of HeIZ 
-# --> range : [tauhe - dtauhe, tauhe + dtauhe]
-# --> If tauhe = None, tauhe = 0.17 * acousticRadius + 18
-# --> If dtauhe = None, dtauhe = 0.05 * acousticRadius
+# --> Range : [tauhe - dtauhe, tauhe + dtauhe]
+#     if tauhe = None, tauhe = 0.17 * acousticRadius + 18.
+#     if dtauhe = None, dtauhe = 0.05 * acousticRadius
 tauhe, dtauhe = None, None
 
 
 # Initial guess for the range of acoustic depth of BCZ 
-# --> range : [taucz - dtaucz, taucz + dtaucz]
-# --> If taucz = None, taucz = 0.34 * acousticRadius + 929.
-# --> If dtaucz = None, dtaucz = 0.10 * acousticRadius
+# --> Range : [taucz - dtaucz, taucz + dtaucz]
+#     if taucz = None, taucz = 0.34 * acousticRadius + 929.
+#     if dtaucz = None, dtaucz = 0.10 * acousticRadius
 taucz, dtaucz = None, None
 
 
 # Frequency range for the average amplitude
-# --> If vmin = None, assume minimum value of the fitted frequencies
-# --> If vmax = None, assume maximum value of the fitted frequencies
+# --> Range : [vmin, vmax]
+#     if vmin = None, assume minimum value of the fitted frequencies
+#     if vmax = None, assume maximum value of the fitted frequencies
 vmin, vmax = None, None
 
 
@@ -123,7 +123,7 @@ for star in stars:
     filename = path + star + "/" + star + ".txt"
     if not os.path.isfile(filename):
         raise FileNotFoundError("Input frequency file not found %s!" %(filename))
-    freq, num_of_mode, num_of_n, delta_nu = ld.loadFreq(filename, num_of_l)
+    freq, num_of_mode, num_of_n, delta_nu = ug.loadFreq(filename, num_of_l)
     if vmin is None:
         nu_min = np.amin(freq[:, 2])
     else:
@@ -225,34 +225,34 @@ for star in stars:
             delta_nu=delta_nu, 
             method=method
         )
-    Acz, AczNErr, AczPErr = sg.medianAndErrors(Acz_rln)
+    Acz, AczNErr, AczPErr = ug.medianAndErrors(Acz_rln)
     print (
         "    - median Acz, nerr, perr: (%.4f, %.4f, %.4f)" %(Acz, AczNErr, AczPErr)
     )
-    Tcz, TczNErr, TczPErr = sg.medianAndErrors(param_rln[:, -6])
+    Tcz, TczNErr, TczPErr = ug.medianAndErrors(param_rln[:, -6])
     print (
         "    - median Tcz, nerr, perr: (%.1f, %.1f, %.1f)" %(Tcz, TczNErr, TczPErr)
     )
-    Pcz, PczNErr, PczPErr = sg.medianAndErrors(param_rln[:, -5])
+    Pcz, PczNErr, PczPErr = ug.medianAndErrors(param_rln[:, -5])
     print (
         "    - median Pcz, nerr, perr: (%.4f, %.4f, %.4f)" %(Pcz, PczNErr, PczPErr)
     )
 
-    # Print average amplitude, acoustic width, acoustic depth and 
-    # --> phase of He signature
-    Ahe, AheNErr, AhePErr = sg.medianAndErrors(Ahe_rln)
+    # Print average amplitude, acoustic width, acoustic depth and phase of He 
+    #    signature
+    Ahe, AheNErr, AhePErr = ug.medianAndErrors(Ahe_rln)
     print (
         "    - median Ahe, nerr, perr: (%.4f, %.4f, %.4f)" %(Ahe, AheNErr, AhePErr)
     )
-    Dhe, DheNErr, DhePErr = sg.medianAndErrors(param_rln[:, -3])
+    Dhe, DheNErr, DhePErr = ug.medianAndErrors(param_rln[:, -3])
     print (
         "    - median Dhe, nerr, perr: (%.3f, %.3f, %.3f)" %(Dhe, DheNErr, DhePErr)
     )
-    The, TheNErr, ThePErr = sg.medianAndErrors(param_rln[:, -2])
+    The, TheNErr, ThePErr = ug.medianAndErrors(param_rln[:, -2])
     print (
         "    - median The, nerr, perr: (%.2f, %.2f, %.2f)" %(The, TheNErr, ThePErr)
     )
-    Phe, PheNErr, PhePErr = sg.medianAndErrors(param_rln[:, -1])
+    Phe, PheNErr, PhePErr = ug.medianAndErrors(param_rln[:, -1])
     print (
         "    - median Phe, nerr, perr: (%.4f, %.4f, %.4f)" %(Phe, PheNErr, PhePErr)
     )

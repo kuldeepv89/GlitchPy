@@ -1,10 +1,14 @@
 """
-Functions for frequency ratios calculations
+Useful functions of miscellaneous type (in particular related to ratios, print log, 
+load data, etc.)
 """
 import sys
 import numpy as np
+import h5py
 
 
+
+#-----------------------------------------------------------------------------------------
 def ratios(frq):
     """
     Routine to compute the ratios (r02, r01 and r10) from oscillation
@@ -27,6 +31,7 @@ def ratios(frq):
         radial orders, r10 ratios,
         scratch for uncertainties (to be calculated), frequencies
     """
+#-----------------------------------------------------------------------------------------
 
     names = ["l", "n", "freq", "err"]
     fmts = [int, int, float, float]
@@ -155,6 +160,8 @@ def ratios(frq):
     return r02, r01, r10
 
 
+
+#-----------------------------------------------------------------------------------------
 def combined_ratios(r02, r01, r10):
     """
     Routine to combine r02, r01 and r10 ratios to produce ordered ratios r010,
@@ -184,6 +191,7 @@ def combined_ratios(r02, r01, r10):
         radial orders, r102 ratios,
         scratch for uncertainties (to be calculated), frequencies
     """
+#-----------------------------------------------------------------------------------------
 
     # Number of ratios
     n02 = r02.shape[0]
@@ -220,6 +228,8 @@ def combined_ratios(r02, r01, r10):
     return r010, r012, r102
 
 
+
+#-----------------------------------------------------------------------------------------
 def specific_ratio(frq, rtype="r012"):
     """
     Routine to compute specific type of ratios from oscillation
@@ -241,6 +251,7 @@ def specific_ratio(frq, rtype="r012"):
     ratio : array
         Ratio values
     """
+#-----------------------------------------------------------------------------------------
     
     # Compute ratios
     r02, r01, r10 = ratios(frq)
@@ -282,6 +293,8 @@ def specific_ratio(frq, rtype="r012"):
     return (norder, frequency, ratio)
 
 
+
+#-----------------------------------------------------------------------------------------
 class Logger(object):
     """
     Class used to redefine stdout to terminal and an output file.
@@ -291,6 +304,7 @@ class Logger(object):
     outfilename : str
         Absolute path to an output file
     """
+#-----------------------------------------------------------------------------------------
 
     # Credit: http://stackoverflow.com/a/14906787
     def __init__(self, outfilename):
@@ -308,6 +322,8 @@ class Logger(object):
         pass
 
 
+
+#-----------------------------------------------------------------------------------------
 def prt_center(text, llen):
     """
     Prints a centered line
@@ -324,4 +340,187 @@ def prt_center(text, llen):
     -------
     None
     """
+#-----------------------------------------------------------------------------------------
+
     print("{0}{1}{0}".format(int((llen - len(text)) / 2) * " ", text))
+
+
+
+#-----------------------------------------------------------------------------------------
+def medianAndErrors(param_rln):
+    '''
+    Compute the median and (negative and positive) uncertainties from the realizations
+
+    Parameters
+    ----------
+    param_rln : array
+        Parameter values for different realizations
+
+    Return
+    ------
+    med : float
+        Median value
+    nerr : float
+        Negative error 
+    perr : float
+        Positive error
+    '''
+#-----------------------------------------------------------------------------------------
+
+    per16 = np.percentile(param_rln, 16)
+    per50 = np.percentile(param_rln, 50)
+    per84 = np.percentile(param_rln, 84)
+    med, nerr, perr = per50, per50 - per16, per84 - per50
+
+    return med, nerr, perr
+
+
+
+#-----------------------------------------------------------------------------------------
+def loadFreq(filename, num_of_l):
+    '''
+    Load the observed oscillation frequencies
+
+    Parameters
+    ----------
+    filename : str
+        Complete path to the file containing observed modes
+    num_of_l : int
+        Number of harmonic degrees (starting from l = 0)
+
+    Return
+    ------
+    freq : array
+        Observed modes (l, n, v(muHz), err(muHz)) 
+    num_of_mode : int
+        Number of modes
+    num_of_n : array of int
+        Number of modes for each l
+    delta_nu : float
+        Large frequncy separation (muHz)
+    '''
+#-----------------------------------------------------------------------------------------
+
+    # Read oscillation frequencies
+    freq = np.genfromtxt(filename, dtype=float, comments='#')
+    freq = freq[freq[:, 0]<(num_of_l - 0.5), :]
+    num_of_mode = freq.shape[0]
+
+    # Fetch number of modes for each l
+    num_of_n = np.zeros(num_of_l, dtype=int)
+    for i in range (num_of_l):
+        num_of_n[i] = len(freq[np.rint(freq[:, 0]) == i, 0])
+    
+    # Estimate large separation using linear fit to the radial modes
+    coefs = np.polyfit(freq[freq[:, 0]<0.5, 1], freq[freq[:, 0]<0.5, 2], 1)
+    delta_nu = coefs[0]
+    
+    return (freq, num_of_mode, num_of_n, delta_nu)
+
+
+
+#-----------------------------------------------------------------------------------------
+def loadFit(filename):
+    '''
+    Load the fit related data
+
+    Parameters
+    ----------
+    filename : str
+        Complete path to the file containing fit related data 
+    
+    Return
+    ------
+    header : tuple
+        Parameters determining the fit (method, regu_param, tol_grad, tauhe, dtauhe,
+        taucz, dtaucz)
+    obsData : tuple
+        Observed data (freq, num_of_n, delta_nu, vmin, vmax, freqDif2, icov)
+    fitData : tuple
+        Fit related data (param, chi2, reg, ier)
+    rtoData : tuple
+        Ratios related data (rtype, ratio)
+    '''
+#-----------------------------------------------------------------------------------------
+
+    # Read the hdf5 file
+    with h5py.File(filename, 'r') as data:
+        method = data['header/method'][()]
+        regu_param = data['header/regu_param'][()]
+        tol_grad = data['header/tol_grad'][()]
+        n_guess = data['header/n_guess'][()]
+        try:
+            tauhe = data['header/tauhe'][()]
+        except KeyError:
+            tauhe = None
+        try:
+            dtauhe = data['header/dtauhe'][()]
+        except KeyError:
+            dtauhe = None
+        try:
+            taucz = data['header/taucz'][()]
+        except KeyError:
+            taucz = None
+        try:
+            dtaucz = data['header/dtaucz'][()]
+        except KeyError:
+            dtaucz = None
+        freq = data['obs/freq'][()]
+        num_of_n = data['obs/num_of_n'][()]
+        delta_nu = data['obs/delta_nu'][()]
+        vmin = data['obs/vmin'][()]
+        vmax = data['obs/vmax'][()]
+        try:
+            freqDif2 = data['obs/freqDif2'][()]
+        except KeyError:
+            freqDif2 = None
+        try:
+            icov = data['obs/icov'][()]
+        except KeyError:
+            icov = None
+        param = data['fit/param'][()]
+        chi2 = data['fit/chi2'][()]
+        reg = data['fit/reg'][()]
+        ier = data['fit/ier'][()]
+        try:
+            rtype = data['rto/rtype'][()]
+        except KeyError:
+            rtype = None
+        if rtype is not None:
+            ratio = data['rto/ratio'][()]
+        else:
+            ratio = None
+    
+    # Group the data
+    header  = (method, regu_param, tol_grad, n_guess, tauhe, dtauhe, taucz, dtaucz)
+    obsData = (freq, num_of_n, delta_nu, vmin, vmax, freqDif2, icov)
+    fitData = (param, chi2, reg, ier)
+    rtoData = (rtype, ratio)
+    
+    return header, obsData, fitData, rtoData
+
+
+
+#-----------------------------------------------------------------------------------------
+def correlation_from_covariance(cov):
+    """
+    Compute correlation matrix from covariance matrix
+
+    Parameters
+    ----------
+    cov : array
+        Covariance matrix
+
+    Return
+    ------
+    cor : array
+        Correlation matrix
+    """
+#-----------------------------------------------------------------------------------------
+
+    v = np.sqrt(np.diag(cov))
+    outer_v = np.outer(v, v)
+    cor = cov / outer_v
+    cor[cov == 0] = 0
+
+    return cor

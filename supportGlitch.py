@@ -2,7 +2,6 @@
 Auxiliary functions for glitch fitting
 '''
 import numpy as np
-import sys
 from sd import sd
 from icov_sd import icov_sd
 from glitch_fq import fit_fq
@@ -459,33 +458,3 @@ def averageAmplitudes(param, vmin, vmax, delta_nu=None, method='FQ'):
         Ahe /= (2. * np.sin(2. * np.pi * delta_nu*1.e-6 * param[n0+5]))**2
 
     return Acz, Ahe
-
-
-
-#-----------------------------------------------------------------------------------------
-def medianAndErrors(param_rln):
-    '''
-    Compute the median and (negative and positive) uncertainties from the realizations
-
-    Parameters
-    ----------
-    param_rln : array
-        Parameter values for different realizations
-
-    Return
-    ------
-    med : float
-        Median value
-    nerr : float
-        Negative error 
-    perr : float
-        Positive error
-    '''
-#-----------------------------------------------------------------------------------------
-
-    per16 = np.percentile(param_rln, 16)
-    per50 = np.percentile(param_rln, 50)
-    per84 = np.percentile(param_rln, 84)
-    med, nerr, perr = per50, per50 - per16, per84 - per50
-
-    return med, nerr, perr
