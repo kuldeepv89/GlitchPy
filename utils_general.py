@@ -432,8 +432,8 @@ def loadFit(filename):
     Return
     ------
     header : tuple
-        Parameters determining the fit (method, regu_param, tol_grad, tauhe, dtauhe,
-        taucz, dtaucz)
+        Parameters determining the fit (method, npoly_params, nderiv, regu_param, 
+        tol_grad, tauhe, dtauhe, taucz, dtaucz)
     obsData : tuple
         Observed data (freq, num_of_n, delta_nu, vmin, vmax, freqDif2, icov)
     fitData : tuple
@@ -446,6 +446,8 @@ def loadFit(filename):
     # Read the hdf5 file
     with h5py.File(filename, 'r') as data:
         method = data['header/method'][()]
+        npoly_params = data['header/npoly_params'][()]
+        nderiv = data['header/nderiv'][()]
         regu_param = data['header/regu_param'][()]
         tol_grad = data['header/tol_grad'][()]
         n_guess = data['header/n_guess'][()]
@@ -492,7 +494,10 @@ def loadFit(filename):
             ratio = None
     
     # Group the data
-    header  = (method, regu_param, tol_grad, n_guess, tauhe, dtauhe, taucz, dtaucz)
+    header  = (
+        method, npoly_params, nderiv, regu_param, tol_grad, n_guess, 
+        tauhe, dtauhe, taucz, dtaucz
+    )
     obsData = (freq, num_of_n, delta_nu, vmin, vmax, freqDif2, icov)
     fitData = (param, chi2, reg, ier)
     rtoData = (rtype, ratio)

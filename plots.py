@@ -26,7 +26,8 @@ def plot_fitSummary(path):
 
     # Load data
     header, obsData, fitData, rtoData = ug.loadFit(path + "fitData.hdf5")
-    method, regu_param, tol_grad, n_guess, tauhe, dtauhe, taucz, dtaucz = header
+    (method, npoly_params, nderiv, regu_param, tol_grad, n_guess, tauhe, 
+        dtauhe, taucz, dtaucz) = header
     freq, num_of_n, delta_nu, vmin, vmax, freqDif2, icov = obsData
     param, chi2, reg, ier = fitData
 
@@ -83,16 +84,22 @@ def plot_fitSummary(path):
         xmin, xmax = np.amin(freq[:, 2]), np.amax(freq[:, 2])
         plt.axhline(y=0., ls=":", color="k", lw=1)
 
-        obsSignal = freq[:, 2] - sg.smoothComponent(
-            param[-1, :], 
-            l=freq[:, 0].astype(int), 
-            n=freq[:, 1].astype(int), 
-            num_of_l=num_of_l, 
-            method=method
-        )
+        nmode = freq.shape[0]
+        obsSignal = np.zeros(nmode)
+        for i in range(nmode):
+            obsSignal[i] = freq[i, 2] - sg.smoothComponent(
+                param[-1, :], 
+                l=freq[i, 0].astype(int), 
+                n=freq[i, 1].astype(int), 
+                num_of_n=num_of_n, 
+                npoly_params=npoly_params,
+                method=method
+            )
 
         n1 = 0
         for i in range(num_of_l):
+            if num_of_n[i] == 0:
+                continue
             n2 = n1 + num_of_n[i]
             ax.errorbar(freq[n1:n2, 2], obsSignal[n1:n2], yerr=freq[n1:n2, 3], 
                 fmt=markerList[i], ms=5, lw=1, ecolor=colorList[i], mec=colorList[i], 
@@ -112,14 +119,20 @@ def plot_fitSummary(path):
         xmin, xmax = np.amin(freqDif2[:, 2]), np.amax(freqDif2[:, 2])
         plt.axhline(y=0., ls=":", color="k", lw=1)
 
-        obsSignal = freqDif2[:, 4] - sg.smoothComponent(
-            param[-1, :], 
-            nu=freqDif2[:, 2],
-            method=method
-        )
+        ndif2 = freqDif2.shape[0]
+        obsSignal = np.zeros(ndif2)
+        for i in range(ndif2):
+            obsSignal[i] = freqDif2[i, 4] - sg.smoothComponent(
+                param[-1, :], 
+                nu=freqDif2[i, 2],
+                npoly_params=npoly_params,
+                method=method
+            )
 
         n1 = 0
         for i in range(num_of_l):
+            if num_of_n[i] == 0:
+                continue
             n2 = n1 + num_of_n[i] - 2
             ax.errorbar(freqDif2[n1:n2, 2], obsSignal[n1:n2], yerr=freqDif2[n1:n2, 5], 
                 fmt=markerList[i], ms=5, lw=1, ecolor=colorList[i], mec=colorList[i], 
@@ -135,7 +148,7 @@ def plot_fitSummary(path):
         raise ValueError("Unrecognized fitting method %s!" %(method))
 
     ax.legend(loc='upper center', fontsize=18, handlelength=1., handletextpad=0.1, 
-        ncol=num_of_l, columnspacing=0.5, frameon=False)
+        ncol=len(num_of_n[num_of_n>0]), columnspacing=0.5, frameon=False)
     ax.set_xlabel(r'$\nu \ (\mu {\rm Hz})$', fontsize=18, labelpad=3)
     if method.lower() == 'fq':
         ax.set_ylabel(r'$\nu_{\rm glitch} \ (\mu {\rm Hz})$', fontsize=22, labelpad=3)

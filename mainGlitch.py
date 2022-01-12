@@ -23,34 +23,59 @@ def main():
     
     # Number of harmonic degrees to read from the data file starting from the
     #    radial modes (i.e. if num_of_l = 1, read only l = 0 modes)
-    num_of_l = 3 
+    num_of_l = 4 
+    
+    
+    # Fitting method (frequencies: "FQ"; second differences: "SD")
+    method = "FQ"
     
     
     # Number of realizations to fit for uncertainties/covariance matrix estimation
     n_rln = 1000
     
     
-    # Fitting method (frequencies: "FQ", and second differences: "SD")
-    method = "FQ"
+    # Ratio type ("r01", "r10", "r02", "r010", "r012", "r102")
+    # --> If rtype = None, calculate only glitch properties (ignore ratios)
+    rtype = "r012" 
     
     
-    # Number of parameters in the smooth component (degree of the polynomial + 1)
-    # --> 5 and 3 works well for "FQ" and "SD", respectively
-    npoly_params = 5
+    # Store median values and covariance matrix
+    medCov = True
     
     
-    # Order of derivative used in the regularization 
-    # --> 3 and 1 works well for "FQ" and "SD", respectively
-    nderiv = 3
+    if method.lower() == "fq":
+
+        # Number of parameters in the smooth component (i.e. degree of polynomial + 1)
+        # --> Fourth degree polynomial works quite well 
+        npoly_params = 5
+        
+        # Order of derivative used in the regularization 
+        # --> Third derivative works quite well 
+        nderiv = 3
+        
+        # Regularization parameter
+        # --> A value of about 7 works quite well for above values of npoly_params 
+        #     and nderiv
+        regu_param = 7.
     
+    elif method.lower() == "sd":
+
+        # Number of parameters in the smooth component (i.e. degree of polynomial + 1)
+        # --> Second degree polynomial works quite well 
+        npoly_params = 3
+        
+        # Order of derivative used in the regularization 
+        # --> First derivative works quite well 
+        nderiv = 1
+        
+        # Regularization parameter
+        # --> A value of about 1000 works quite well for above values of npoly_params 
+        #     and nderiv
+        regu_param = 1000.
     
-    # Regularization parameter
-    # --> 7. and 1000. works well for "FQ" and "SD", respectively
-    regu_param = 7.
-    
-    
+
     # Absolute tolerance on gradients during the optimization
-    tol_grad = 1e-3
+    tol_grad = 0.001
     
     
     # Number of initial guesses to explore the parameter space for finding 
@@ -77,15 +102,6 @@ def main():
     #     if vmin = None, assume minimum value of the fitted frequencies
     #     if vmax = None, assume maximum value of the fitted frequencies
     vmin, vmax = None, None
-    
-    
-    # Ratio type ("r01", "r10", "r02", "r010", "r012", "r102")
-    # --> If rtype = None, calculate only glitch properties (ignore ratios)
-    rtype = "r012" 
-    
-    
-    # Store median values and covariance matrix
-    medCov = True
     
     
     
@@ -143,6 +159,7 @@ def main():
             "    - frequency range for averaging: (%.2f, %.2f) muHz" %(nu_min, nu_max)
         )
         print ("    - large separation: %.2f muHz" %(delta_nu))
+        print ("    - acoustic radius: %d sec" %(5e5/delta_nu))
     
         # Compute second differences (if necessary)
         num_of_dif2, freqDif2, icov = None, None, None
@@ -271,6 +288,8 @@ def main():
             os.remove(filename)
         with h5py.File(filename, 'w') as f:
             f.create_dataset('header/method', data=method)
+            f.create_dataset('header/npoly_params', data=npoly_params)
+            f.create_dataset('header/nderiv', data=nderiv)
             f.create_dataset('header/regu_param', data=regu_param)
             f.create_dataset('header/tol_grad', data=tol_grad)
             f.create_dataset('header/n_guess', data=n_guess)
@@ -356,8 +375,8 @@ def main():
                 for i in range(ngr-3):
                     med[i] = np.median(grparams[:, i])
                     print (
-                        "    - n, freq, median ratio, err: (%d, %.2f, %.5f, %.5f, %.5f)"
-                        %(round(norder[i]), frq[i], rto[i], med[i], np.sqrt(cov[i, i]))
+                        "    - n, freq, median ratio, err: (%d, %.2f, %.5f, %.5f)"
+                        %(round(norder[i]), frq[i], med[i], np.sqrt(cov[i, i]))
                     )
     
             # Plot correlations

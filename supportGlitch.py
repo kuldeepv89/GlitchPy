@@ -111,7 +111,7 @@ def fit(freq, num_of_n, delta_nu, num_of_dif2=None, freqDif2=None, icov=None,
     if method.lower() == 'fq': 
 
         # Total number of fitting parameters
-        nparams = len(num_of_n) * npoly_params + 7
+        nparams = len(num_of_n[num_of_n>0]) * npoly_params + 7
 
         # Fit original data
         # --> Glitches
@@ -263,7 +263,7 @@ def compDif2(num_of_l, freq, num_of_mode, num_of_n):
 #-----------------------------------------------------------------------------------------
 
     # Compute second differences of oscillation frequencies
-    num_of_dif2 = num_of_mode - 2 * num_of_l
+    num_of_dif2 = num_of_mode - 2 * len(num_of_n[num_of_n>0])
     freqDif2 = sd(freq, num_of_n, num_of_dif2)
     
     # Compute inverse covariance matrix for second differences
@@ -349,7 +349,9 @@ def totalGlitchSignal(nu, param):
 
 
 #-----------------------------------------------------------------------------------------
-def smoothComponent(param, nu=None, l=None, n=None, num_of_l=None, method='FQ'):
+def smoothComponent(
+        param, l=None, n=None, nu=None, num_of_n=None, npoly_params=None, method='FQ'
+    ):
     '''
     Compute smooth component for frequency/second-difference fit
     
@@ -357,18 +359,20 @@ def smoothComponent(param, nu=None, l=None, n=None, num_of_l=None, method='FQ'):
     ----------
     param : array
         Fitted Parameters
-    nu : float
-        Frequency of the mode (muHz)
-        used only for method='SD'
     l : int
         Harmonic degree of the mode
         used only for method='FQ'
     n : int
         Radial order of the mode
         used only for method='FQ'
-    num_of_l : int
-        Number of harmonic degree used in the fit
+    nu : float
+        Frequency of the mode (muHz)
+        used only for method='SD'
+    num_of_n : array of int
+        Number of modes for each l
         used only for method='FQ'
+    npoly_params : int
+        Number of parameters in the smooth component 
     method : str
         Fitting method ('FQ' or 'SD')
 
@@ -384,21 +388,20 @@ def smoothComponent(param, nu=None, l=None, n=None, num_of_l=None, method='FQ'):
 
     # Smooth component for frequency fit
     if method.lower() == 'fq':
-        if not all(x is not None for x in [l, n, num_of_l]):
-            raise ValueError("l, n, num_of_l cannot be None for FQ!")
+        if not all(x is not None for x in [l, n, num_of_n, npoly_params]):
+            raise ValueError("l, n, num_of_n, npoly_params cannot be None for FQ!")
 
-        npoly = (len(param) - 7) // num_of_l
-        n0 = npoly * l
-        for i in range(npoly-1, -1, -1):
+        ntmp = num_of_n[0:l+1] 
+        n0 = npoly_params * (len(ntmp[ntmp>0]) - 1)
+        for i in range(npoly_params-1, -1, -1):
             smooth = smooth * n + param[n0+i]
 
     # Smooth component for frequency fit
     elif method.lower() == 'sd':
-        if nu is None:
-            raise ValueError("nu cannot be None for SD!")
+        if not all(x is not None for x in [nu, npoly_params]):
+            raise ValueError("nu, npoly_params cannot be None for SD!")
 
-        npoly = len(param) - 7
-        for i in range(npoly-1, -1, -1):
+        for i in range(npoly_params-1, -1, -1):
             smooth = smooth * nu + param[i]
 
     else:
