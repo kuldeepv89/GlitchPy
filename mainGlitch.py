@@ -23,7 +23,7 @@ def main():
     
     # Number of harmonic degrees to read from the data file starting from the
     #    radial modes (i.e. if num_of_l = 1, read only l = 0 modes)
-    num_of_l = 4 
+    num_of_l = 3 
     
     
     # Fitting method (frequencies: "FQ"; second differences: "SD")
@@ -31,7 +31,7 @@ def main():
     
     
     # Number of realizations to fit for uncertainties/covariance matrix estimation
-    n_rln = 1000
+    n_rln = 10000
     
     
     # Ratio type ("r01", "r10", "r02", "r010", "r012", "r102")
@@ -56,7 +56,7 @@ def main():
         # Regularization parameter
         # --> A value of about 7 works quite well for above values of npoly_params 
         #     and nderiv
-        regu_param = 7.
+        regu_param = 10.
     
     elif method.lower() == "sd":
 
@@ -130,7 +130,7 @@ def main():
             "FREQUENCIES (FQ) AS WELL AS IN SECOND DIFFERENCES (SD)", 88
         )
         print ()
-        ug.prt_center("https://github.com/kuldeepv89/glitch-fitting", 88)
+        ug.prt_center("https://github.com/kuldeepv89/GlitchPy", 88)
         print (88 * "=")
     
         # Print star name/ID
@@ -235,7 +235,8 @@ def main():
         print ()
         print ("The fit and related summary data:")
         print ("    - total and reduced chi-squares: (%.4f, %.4f)" %(chi2[-1], rchi2))
-        print ("    - failed realizations: %d/%d" %(n_rln - nfit_rln, n_rln))
+        if n_rln != nfit_rln:
+            print ("WARNING: Failed realizations: %d/%d" %(n_rln - nfit_rln, n_rln))
     
     
         # Print fitted glitch parameters with uncertainties 
@@ -321,17 +322,29 @@ def main():
     
         # Store median and covariance matrix in a HDF5 file (if necessary)
         if medCov:
-            grparams = np.zeros((nfit_rln, 3))
-            grparams[:, 0], grparams[:, 1], grparams[:, 2] = (
-                Ahe_rln[:], param_rln[:, -3], param_rln[:, -2]
-            ) 
+            print ()
+            print ("The observables with uncertainties from covariance matrix:")
+
+            # Check for zero He amplitude
+            na0 = len(Ahe_rln[Ahe_rln<=1e-8])
+            if na0 > 0:
+                print (
+                    "WARNING: Realizations with zero He amplitude: %d/%d. "
+                    "Ignore them..." %(na0, nfit_rln)
+                )
+            grparams = np.zeros((nfit_rln - na0, 3))
+            grparams[:, 0] = Ahe_rln[Ahe_rln>1e-8]
+            grparams[:, 1] = param_rln[Ahe_rln>1e-8, -3]
+            grparams[:, 2] = param_rln[Ahe_rln>1e-8, -2]
+
             if rtype is not None:
                 ratio_rln = ratio[0:n_rln, :]
                 ratio_rln = ratio_rln[ier_rln == 0, :]
+                ratio_rln = ratio_rln[Ahe_rln>1e-8, :]
                 grparams = np.hstack((ratio_rln, grparams))
     
             # Covariance
-            j = int(round(nfit_rln / 2))
+            j = int(round((nfit_rln - na0) / 2))
             covtmp = MinCovDet().fit(grparams[0:j, :]).covariance_
             cov = MinCovDet().fit(grparams).covariance_
     
@@ -346,16 +359,12 @@ def main():
                 )
             )
             if rdif > 0.1:
-                print ()
                 print (
                     "WARNING: Maximum relative difference %.2e > 0.1! " 
                     "Check covariance..." %(rdif)
                 )
-                print ()
     
             # Median
-            print ()
-            print ("The observables with uncertainties from covariance matrix:")
             ngr = grparams.shape[1]
             med = np.zeros(ngr)
             med[-3] = np.median(grparams[:, -3])
