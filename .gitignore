@@ -4,5 +4,5 @@ __pycache__/
 *.dSYM
 *.zip
 
-16cyga/FQ/
-16cyga/SD/
+example/FQ/
+example/SD/
