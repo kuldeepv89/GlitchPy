@@ -480,9 +480,13 @@ def plot_correlations(cov, filename="./correlations.png"):
     ax.set_rasterization_zorder(-1)
     
     ax = sns.heatmap(
-        cor, vmin=-1, vmax=1, linewidths=0, linecolor='white', cmap=None, 
-        center=0, square=True
+        cor, vmin=-1, vmax=1, linewidths=0, linecolor='white', cmap='RdBu', 
+        center=0, square=True, cbar_kws={"label": r"Correlation coefficient"}
     )
+    ax.axhline(y=0, color='k',linewidth=2)
+    ax.axhline(y=n, color='k',linewidth=2)
+    ax.axvline(x=0, color='k',linewidth=2)
+    ax.axvline(x=n, color='k',linewidth=2)
     
     plt.xlim(0, n)
     plt.ylim(n, 0)

@@ -23,7 +23,7 @@ def main():
     
     # Number of harmonic degrees to read from the data file starting from the
     #    radial modes (i.e. if num_of_l = 1, read only l = 0 modes)
-    num_of_l = 3 
+    num_of_l = 4 
     
     
     # Fitting method (frequencies: "FQ"; second differences: "SD")
