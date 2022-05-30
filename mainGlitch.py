@@ -27,11 +27,11 @@ def main():
     
     
     # Fitting method (frequencies: "FQ"; second differences: "SD")
-    method = "FQ"
+    method = "SD"
     
     
     # Number of realizations to fit for uncertainties/covariance matrix estimation
-    n_rln = 10000
+    n_rln = 100
     
     
     # Ratio type ("r01", "r10", "r02", "r010", "r012", "r102")
@@ -123,13 +123,9 @@ def main():
     
         # Print header
         print (88 * "=")
-        ug.prt_center(
-            "FITTING SIGNATURES OF ACOUSTIC GLITCHES IN STELLAR OSCILLATION", 88
-        )
-        ug.prt_center(
-            "FREQUENCIES (FQ) AS WELL AS IN SECOND DIFFERENCES (SD)", 88
-        )
+        ug.prt_center("FREQUENCY RATIOS AND GLITCH PROPERTIES", 88)
         print ()
+        ug.prt_center("The GlitchPy code", 88)
         ug.prt_center("https://github.com/kuldeepv89/GlitchPy", 88)
         print (88 * "=")
     
@@ -188,6 +184,7 @@ def main():
         # Print miscellaneous information    
         print ()
         print ("Miscellaneous information:")
+        print ("    - number of realizations: %d" %(n_rln))
         print ("    - tauhe, dtauhe: ({0}, {1})".format(tauhe, dtauhe))
         print ("    - taucz, dtaucz: ({0}, {1})".format(taucz, dtaucz))
         print ("    - ratio type: {0}".format(rtype))

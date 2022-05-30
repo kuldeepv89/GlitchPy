@@ -1,13 +1,92 @@
 '''
 Auxiliary functions for glitch fitting
 '''
+import sys
 import numpy as np
-from sd import sd
-from icov_sd import icov_sd
-from glitch_fq import fit_fq
-from glitch_sd import fit_sd
 import utils_general as ug
 from copy import deepcopy
+from subprocess import call
+
+# Import external modules, compile if not available
+try:
+    from glitch_fq import fit_fq
+    from sd import sd
+    from icov_sd import icov_sd
+    from glitch_sd import fit_sd
+except ModuleNotFoundError:
+    print("Running the code for the first time! Compile all the external modules...")
+
+    # Module glitch_fq
+    print("Compiling external glitch_fq module...")
+    try:
+        call(
+            [
+                "f2py",
+                "-c",
+                "glitch_fq.f95",
+                "-m",
+                "glitch_fq",
+                "--quiet",
+            ]
+        )
+        from glitch_fq import fit_fq
+    except Exception as err:
+        print("Failed to compile and import glitch_fq module:", err)
+        sys.exit(1)
+
+    # Module sd 
+    print("Compiling external sd module...")
+    try:
+        call(
+            [
+                "f2py",
+                "-c",
+                "sd.f95",
+                "-m",
+                "sd",
+                "--quiet",
+            ]
+        )
+        from sd import sd
+    except Exception as err:
+        print("Failed to compile and import sd module:", err)
+        sys.exit(2)
+
+    # Module icov_sd 
+    print("Compiling external icov_sd module...")
+    try:
+        call(
+            [
+                "f2py",
+                "-c",
+                "icov_sd.f95",
+                "-m",
+                "icov_sd",
+                "--quiet",
+            ]
+        )
+        from icov_sd import icov_sd
+    except Exception as err:
+        print("Failed to compile and import icov_sd module:", err)
+        sys.exit(3)
+
+    # Module glitch_sd 
+    print("Compiling external glitch_sd module...")
+    try:
+        call(
+            [
+                "f2py",
+                "-c",
+                "glitch_sd.f95",
+                "-m",
+                "glitch_sd",
+                "--quiet",
+            ]
+        )
+        from glitch_sd import fit_sd
+    except Exception as err:
+        print("Failed to compile and import glitch_sd module:", err)
+        sys.exit(4)
 
 
 
@@ -167,6 +246,8 @@ def fit(freq, num_of_n, delta_nu, num_of_dif2=None, freqDif2=None, icov=None,
 
     # Fit second differences
     elif method.lower() == 'sd':
+
+        # Check input data
         if not all(x is not None for x in [num_of_dif2, freqDif2, icov]):
             raise ValueError(
                 "num_of_dif2, freqDif2, icov cannot be None for SD!"
