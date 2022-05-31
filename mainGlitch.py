@@ -14,10 +14,10 @@ def main():
 
     # Path and star names
     # --> For each "star" in the list "stars" below, assume input frequency 
-    #     file name to be stars.txt, which is present in the folder path/star/
-    # --> Output results go to the folder path/star/method/ (where method is 
+    #     file name to be stars.txt, which is present in the folder path/
+    # --> Output results go to the folder path/star_method/ (where method is 
     #     either FQ or SD, see below)
-    path = "/Users/au572692/gitProjects/GlitchPy/"
+    path = "/Users/au572692/gitProjects/GlitchPy/example"
     stars = ["16cyga"]
     
     
@@ -27,20 +27,16 @@ def main():
     
     
     # Fitting method (frequencies: "FQ"; second differences: "SD")
-    method = "SD"
+    method = "FQ"
     
     
     # Number of realizations to fit for uncertainties/covariance matrix estimation
-    n_rln = 100
+    n_rln = 10000
     
     
     # Ratio type ("r01", "r10", "r02", "r010", "r012", "r102")
     # --> If rtype = None, calculate only glitch properties (ignore ratios)
     rtype = "r012" 
-    
-    
-    # Store median values and covariance matrix
-    medCov = True
     
     
     if method.lower() == "fq":
@@ -114,12 +110,11 @@ def main():
     
     
         # Start the log file
-        outputdir = path + star + "/" + method + "/"
+        outputdir = os.path.join(path, star + "_" + method)
         if not os.path.isdir(outputdir):
             os.makedirs(outputdir)
-        filename = outputdir + "log.txt"
         stdout = sys.stdout
-        sys.stdout = ug.Logger(filename)
+        sys.stdout = ug.Logger(os.path.join(outputdir, "log.txt"))
     
         # Print header
         print (88 * "=")
@@ -135,10 +130,10 @@ def main():
     
     
         # Load observed oscillation frequencies
-        filename = path + star + "/" + star + ".txt"
-        if not os.path.isfile(filename):
-            raise FileNotFoundError("Input frequency file not found %s!" %(filename))
-        freq, num_of_mode, num_of_n, delta_nu = ug.loadFreq(filename, num_of_l)
+        freqfile = os.path.join(path, star + ".txt")
+        if not os.path.isfile(freqfile):
+            raise FileNotFoundError("Input frequency file not found %s!" %(freqfile))
+        freq, num_of_mode, num_of_n, delta_nu = ug.loadFreq(freqfile, num_of_l)
         if vmin is None:
             nu_min = np.amin(freq[:, 2])
         else:
@@ -188,10 +183,9 @@ def main():
         print ("    - tauhe, dtauhe: ({0}, {1})".format(tauhe, dtauhe))
         print ("    - taucz, dtaucz: ({0}, {1})".format(taucz, dtaucz))
         print ("    - ratio type: {0}".format(rtype))
-        print ("    - store median and covariance: {0}".format(medCov))
     
     
-        # Fit glitch signatures
+        # Fit the glitch signatures
         print ()
         print ("* Fitting data... ")
         param, chi2, reg, ier, ratio = sg.fit(
@@ -215,29 +209,48 @@ def main():
             rtype=rtype
         )
         print ("* Done!")
-        param_rln, ier_rln = param[0:n_rln, :], ier[0:n_rln]
-        param_rln = param_rln[ier_rln == 0, :]
-        nfit_rln = param_rln.shape[0]
-        npar = param.shape[1]
+
+        # Print chi-square of the fit (to the observed data) 
+        print ()
+        print ("The summary of the fit:")
         if method.lower() == "fq":
-            dof = freq.shape[0] - npar
+            dof = freq.shape[0] - param.shape[1]
         elif method.lower() == "sd":
-            dof = freqDif2.shape[0] - npar
+            dof = freqDif2.shape[0] - param.shape[1]
         if dof <= 0:
             print ()
             print ("WARNING: Degree of freedom %d <= 0! Setting it to 1..." %(dof))
             print ()
             dof = 1
         rchi2 = chi2[-1] / dof
-        print ()
-        print ("The fit and related summary data:")
         print ("    - total and reduced chi-squares: (%.4f, %.4f)" %(chi2[-1], rchi2))
-        if n_rln != nfit_rln:
-            print ("WARNING: Failed realizations: %d/%d" %(n_rln - nfit_rln, n_rln))
+
+        # Produce plots to visualize the fit
+        plotdata = {}
+        plotdata["method"] = method
+        plotdata["npoly_params"] = npoly_params
+        plotdata["tauhe"] = tauhe
+        plotdata["dtauhe"] = dtauhe
+        plotdata["taucz"] = taucz
+        plotdata["dtaucz"] = dtaucz
+        plotdata["freq"] = freq
+        plotdata["num_of_n"] = num_of_n
+        plotdata["delta_nu"] = delta_nu
+        plotdata["vmin"] = nu_min
+        plotdata["vmax"] = nu_max
+        plotdata["freqDif2"] = freqDif2
+        plotdata["param"] = param
+        plots.fit_summary(plotdata, outputdir)
     
-    
-        # Print fitted glitch parameters with uncertainties 
-        # --> Print average amplitude, acoustic depth and phase of CZ signature
+        # Extract successfully fitted realizations
+        param_rln, ier_rln = param[0:n_rln, :], ier[0:n_rln]
+        param_rln = param_rln[ier_rln == 0, :]
+        nfit_rln = param_rln.shape[0]
+        if rtype is not None:
+            ratio_rln = ratio[0:n_rln, :]
+            ratio_rln = ratio_rln[ier_rln == 0, :]
+
+        # Compute average amplitudes of the He and CZ signatures
         Acz_rln, Ahe_rln = np.zeros(nfit_rln), np.zeros(nfit_rln)
         for j in range(nfit_rln):
             Acz_rln[j], Ahe_rln[j] = sg.averageAmplitudes(
@@ -247,186 +260,157 @@ def main():
                 delta_nu=delta_nu, 
                 method=method
             )
-        Acz, AczNErr, AczPErr = ug.medianAndErrors(Acz_rln)
+
+        # Extract realizations with non-zero average He amplitude
+        param_rln = param_rln[Ahe_rln>1e-8, :]
+        if rtype is not None:
+            ratio_rln = ratio_rln[Ahe_rln>1e-8, :]
+        Acz_rln = Acz_rln[Ahe_rln>1e-8]
+        Ahe_rln = Ahe_rln[Ahe_rln>1e-8]
+        nfit_rln = param_rln.shape[0]
+        if n_rln != nfit_rln:
+            print (
+                "WARNING: Fits failed (or had zero <Ahe>) for realizations: %d/%d" 
+                %(n_rln - nfit_rln, n_rln)
+            )
+    
+        # Print median values and associated negative and positive errorbars of the CZ
+        #     signature (average amplitude, acoustic depth and phase)
+        Acz = {"unit": "muHz"}
+        Acz["value"], Acz["nerr"], Acz["perr"] = ug.medianAndErrors(Acz_rln)
         print (
-            "    - median Acz, nerr, perr: (%.4f, %.4f, %.4f)" %(Acz, AczNErr, AczPErr)
+            "    - median Acz, nerr, perr: (%.4f, %.4f, %.4f)" 
+            %(Acz["value"], Acz["nerr"], Acz["perr"])
         )
-        Tcz, TczNErr, TczPErr = ug.medianAndErrors(param_rln[:, -6])
+
+        Tcz = {"unit": "sec"}
+        Tcz["value"], Tcz["nerr"], Tcz["perr"] = ug.medianAndErrors(param_rln[:, -6])
         print (
-            "    - median Tcz, nerr, perr: (%.1f, %.1f, %.1f)" %(Tcz, TczNErr, TczPErr)
+            "    - median Tcz, nerr, perr: (%.1f, %.1f, %.1f)" 
+            %(Tcz["value"], Tcz["nerr"], Tcz["perr"])
         )
-        Pcz, PczNErr, PczPErr = ug.medianAndErrors(param_rln[:, -5])
+
+        Pcz = {"unit": "dimesionless"}
+        Pcz["value"], Pcz["nerr"], Pcz["perr"] = ug.medianAndErrors(param_rln[:, -5])
         print (
-            "    - median Pcz, nerr, perr: (%.4f, %.4f, %.4f)" %(Pcz, PczNErr, PczPErr)
+            "    - median Pcz, nerr, perr: (%.4f, %.4f, %.4f)" 
+            %(Pcz["value"], Pcz["nerr"], Pcz["perr"])
         )
     
-        # Print average amplitude, acoustic width, acoustic depth and phase of He 
-        #    signature
-        Ahe, AheNErr, AhePErr = ug.medianAndErrors(Ahe_rln)
+        # Print median values and associated negative and positive errorbars of the He
+        #     signature (average amplitude, acoustic width, acoustic depth and phase)
+        Ahe = {"unit": "muHz"}
+        Ahe["value"], Ahe["nerr"], Ahe["perr"] = ug.medianAndErrors(Ahe_rln)
         print (
-            "    - median Ahe, nerr, perr: (%.4f, %.4f, %.4f)" %(Ahe, AheNErr, AhePErr)
+            "    - median Ahe, nerr, perr: (%.4f, %.4f, %.4f)" 
+            %(Ahe["value"], Ahe["nerr"], Ahe["perr"])
         )
-        Dhe, DheNErr, DhePErr = ug.medianAndErrors(param_rln[:, -3])
+
+        Dhe = {"unit": "sec"}
+        Dhe["value"], Dhe["nerr"], Dhe["perr"] = ug.medianAndErrors(param_rln[:, -3])
         print (
-            "    - median Dhe, nerr, perr: (%.3f, %.3f, %.3f)" %(Dhe, DheNErr, DhePErr)
+            "    - median Dhe, nerr, perr: (%.3f, %.3f, %.3f)" 
+            %(Dhe["value"], Dhe["nerr"], Dhe["perr"])
         )
-        The, TheNErr, ThePErr = ug.medianAndErrors(param_rln[:, -2])
+
+        The = {"unit": "sec"}
+        The["value"], The["nerr"], The["perr"] = ug.medianAndErrors(param_rln[:, -2])
         print (
-            "    - median The, nerr, perr: (%.2f, %.2f, %.2f)" %(The, TheNErr, ThePErr)
+            "    - median The, nerr, perr: (%.2f, %.2f, %.2f)" 
+            %(The["value"], The["nerr"], The["perr"])
         )
-        Phe, PheNErr, PhePErr = ug.medianAndErrors(param_rln[:, -1])
+
+        Phe = {"unit": "dimesionless"}
+        Phe["value"], Phe["nerr"], Phe["perr"] = ug.medianAndErrors(param_rln[:, -1])
         print (
-            "    - median Phe, nerr, perr: (%.4f, %.4f, %.4f)" %(Phe, PheNErr, PhePErr)
+            "    - median Phe, nerr, perr: (%.4f, %.4f, %.4f)" 
+            %(Phe["value"], Phe["nerr"], Phe["perr"])
         )
         
-        
-        # Store all the data in a HDF5 file
-        filename = outputdir + "fitData.hdf5"  
-        if os.path.isfile(filename):
-            os.remove(filename)
-        with h5py.File(filename, 'w') as f:
-            f.create_dataset('header/method', data=method)
-            f.create_dataset('header/npoly_params', data=npoly_params)
-            f.create_dataset('header/nderiv', data=nderiv)
-            f.create_dataset('header/regu_param', data=regu_param)
-            f.create_dataset('header/tol_grad', data=tol_grad)
-            f.create_dataset('header/n_guess', data=n_guess)
+        # Combine ratios and He glitch properties into a single variable
+        grparams = np.zeros((nfit_rln, 3))
+        grparams[:, 0] = Ahe_rln[:]
+        grparams[:, 1] = param_rln[:, -3]
+        grparams[:, 2] = param_rln[:, -2]
+        if rtype is not None:
+            grparams = np.hstack((ratio_rln, grparams))
+    
+        # Compute the median values
+        ngr = grparams.shape[1]
+        gr = np.zeros(ngr)
+        gr[-3], gr[-2], gr[-1] = Ahe["value"], Dhe["value"], The["value"] 
+        if rtype is not None:
+            norder, frq, rto = ug.specific_ratio(freq, rtype=rtype)
+            for i in range(ngr-3):
+                gr[i] = np.median(grparams[:, i])
+    
+        # Compute the covariance matrix
+        j = int(round(nfit_rln / 2))
+        covtmp = MinCovDet().fit(grparams[0:j, :]).covariance_
+        gr_cov = MinCovDet().fit(grparams).covariance_
+    
+        # Test convergence (change in standard deviations below a relative 
+        #    tolerance)
+        rdif = np.amax(
+            np.abs(
+                np.divide(
+                    np.sqrt(np.diag(covtmp)) - np.sqrt(np.diag(gr_cov)), 
+                    np.sqrt(np.diag(gr_cov))
+                )
+            )
+        )
+        if rdif > 0.1:
+            print (
+                "WARNING: Maximum relative difference %.2e > 0.1! " 
+                "Check the covariance..." %(rdif)
+            )
+    
+        # Plot the correlation matrix
+        plots.correlations(gr_cov, outputdir)
+    
+        # Write the results to HDF5 file
+        outfile = os.path.join(outputdir, "results.hdf5")  
+        if os.path.isfile(outfile):
+            os.remove(outfile)
+        with h5py.File(outfile, "w") as ff:
+            ff.create_dataset('header/method', data=method)
+            ff.create_dataset('header/npoly_params', data=npoly_params)
+            ff.create_dataset('header/nderiv', data=nderiv)
+            ff.create_dataset('header/regu_param', data=regu_param)
+            ff.create_dataset('header/tol_grad', data=tol_grad)
+            ff.create_dataset('header/n_guess', data=n_guess)
             if tauhe is not None:
-                f.create_dataset('header/tauhe', data=tauhe)
+                ff.create_dataset('header/tauhe', data=tauhe)
             if dtauhe is not None:
-                f.create_dataset('header/dtauhe', data=dtauhe)
+                ff.create_dataset('header/dtauhe', data=dtauhe)
             if taucz is not None:
-                f.create_dataset('header/taucz', data=taucz)
+                ff.create_dataset('header/taucz', data=taucz)
             if dtaucz is not None:
-                f.create_dataset('header/dtaucz', data=dtaucz)
-            f.create_dataset('obs/freq', data=freq)
-            f.create_dataset('obs/num_of_n', data=num_of_n)
-            f.create_dataset('obs/delta_nu', data=delta_nu)
-            f.create_dataset('obs/vmin', data=nu_min)
-            f.create_dataset('obs/vmax', data=nu_max)
+                ff.create_dataset('header/dtaucz', data=dtaucz)
+
+            ff.create_dataset('obs/freq', data=freq)
+            ff.create_dataset('obs/num_of_n', data=num_of_n)
+            ff.create_dataset('obs/delta_nu', data=delta_nu)
+            ff.create_dataset('obs/vmin', data=nu_min)
+            ff.create_dataset('obs/vmax', data=nu_max)
             if freqDif2 is not None:
-                f.create_dataset('obs/freqDif2', data=freqDif2)
+                ff.create_dataset('obs/freqDif2', data=freqDif2)
             if icov is not None:
-                f.create_dataset('obs/icov', data=icov)
-            f.create_dataset('fit/param', data=param)
-            f.create_dataset('fit/chi2', data=chi2)
-            f.create_dataset('fit/reg', data=reg)
-            f.create_dataset('fit/ier', data=ier)
-            if rtype is not None:
-                f.create_dataset('rto/rtype', data=rtype)
-                f.create_dataset('rto/ratio', data=ratio)
-    
-    
-        # Store median and covariance matrix in a HDF5 file (if necessary)
-        if medCov:
-            print ()
-            print ("The observables with uncertainties from covariance matrix:")
+                ff.create_dataset('obs/icov', data=icov)
 
-            # Check for zero He amplitude
-            na0 = len(Ahe_rln[Ahe_rln<=1e-8])
-            if na0 > 0:
-                print (
-                    "WARNING: Realizations with zero He amplitude: %d/%d. "
-                    "Ignore them..." %(na0, nfit_rln)
-                )
-            grparams = np.zeros((nfit_rln - na0, 3))
-            grparams[:, 0] = Ahe_rln[Ahe_rln>1e-8]
-            grparams[:, 1] = param_rln[Ahe_rln>1e-8, -3]
-            grparams[:, 2] = param_rln[Ahe_rln>1e-8, -2]
+            ff.create_dataset('fit/param', data=param)
+            ff.create_dataset('fit/chi2', data=chi2)
+            ff.create_dataset('fit/reg', data=reg)
+            ff.create_dataset('fit/ier', data=ier)
+            if rtype is not None:
+                ff.create_dataset('rto/rtype', data=rtype)
+                ff.create_dataset('rto/ratio', data=ratio)
+                ff.create_dataset('rto/norder', data=norder)
+                ff.create_dataset('rto/frq', data=frq)
+    
+            ff.create_dataset('cov/params', data=gr)
+            ff.create_dataset('cov/cov', data=gr_cov)
 
-            if rtype is not None:
-                ratio_rln = ratio[0:n_rln, :]
-                ratio_rln = ratio_rln[ier_rln == 0, :]
-                ratio_rln = ratio_rln[Ahe_rln>1e-8, :]
-                grparams = np.hstack((ratio_rln, grparams))
-    
-            # Covariance
-            j = int(round((nfit_rln - na0) / 2))
-            covtmp = MinCovDet().fit(grparams[0:j, :]).covariance_
-            cov = MinCovDet().fit(grparams).covariance_
-    
-            # Test convergence (change in standard deviations below a relative 
-            #    tolerance)
-            rdif = np.amax(
-                np.abs(
-                    np.divide(
-                        np.sqrt(np.diag(covtmp)) - np.sqrt(np.diag(cov)), 
-                        np.sqrt(np.diag(cov))
-                    )
-                )
-            )
-            if rdif > 0.1:
-                print (
-                    "WARNING: Maximum relative difference %.2e > 0.1! " 
-                    "Check covariance..." %(rdif)
-                )
-    
-            # Median
-            ngr = grparams.shape[1]
-            med = np.zeros(ngr)
-            med[-3] = np.median(grparams[:, -3])
-            print (
-                "    - median Ahe, err: (%.4f, %.4f)" %(med[-3], np.sqrt(cov[-3, -3]))
-            )
-            med[-2] = np.median(grparams[:, -2])
-            print (
-                "    - median Dhe, err: (%.3f, %.3f)" %(med[-2], np.sqrt(cov[-2, -2]))
-            )
-            med[-1] = np.median(grparams[:, -1])
-            print (
-                "    - median The, err: (%.2f, %.2f)" %(med[-1], np.sqrt(cov[-1, -1]))
-            )
-            if rtype is not None:
-                norder, frq, rto = ug.specific_ratio(freq, rtype=rtype)
-                for i in range(ngr-3):
-                    med[i] = np.median(grparams[:, i])
-                    print (
-                        "    - n, freq, median ratio, err: (%d, %.2f, %.5f, %.5f)"
-                        %(round(norder[i]), frq[i], med[i], np.sqrt(cov[i, i]))
-                    )
-    
-            # Plot correlations
-            filename = outputdir + "correlations.png"  
-            plots.plot_correlations(cov, filename=filename)
-    
-            # Write to hdf5 file
-            filename = outputdir + "medCov.hdf5"  
-            if os.path.isfile(filename):
-                os.remove(filename)
-            with h5py.File(filename, "w") as ff:
-                ff.create_dataset('header/method', data=method)
-                ff.create_dataset('header/regu_param', data=regu_param)
-                ff.create_dataset('header/tol_grad', data=tol_grad)
-                ff.create_dataset('header/n_guess', data=n_guess)
-                if rtype is None:
-                    ff.create_dataset("medglh", data=med)
-                    ff.create_dataset("covglh", data=cov)
-                elif rtype == "r02":
-                    ff.create_dataset("medg02", data=med)
-                    ff.create_dataset("covg02", data=cov)
-                elif rtype == "r01":
-                    ff.create_dataset("medg01", data=med)
-                    ff.create_dataset("covg01", data=cov)
-                elif rtype == "r10":
-                    ff.create_dataset("medg10", data=med)
-                    ff.create_dataset("covg10", data=cov)
-                elif rtype == "r010":
-                    ff.create_dataset("medg010", data=med)
-                    ff.create_dataset("covg010", data=cov)
-                elif rtype == "r012":
-                    ff.create_dataset("medg012", data=med)
-                    ff.create_dataset("covg012", data=cov)
-                elif rtype == "r102":
-                    ff.create_dataset("medg102", data=med)
-                    ff.create_dataset("covg102", data=cov)
-                else:
-                    raise ValueError("Unrecognized ratio-type %s!" %(rtype))
-    
-    
-        # Finally generate plots summarizing the fit
-        plots.plot_fitSummary(outputdir)
-    
-    
         # Save log file
         sys.stdout = stdout
 

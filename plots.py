@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import supportGlitch as sg
 import utils_general as ug
@@ -9,14 +10,17 @@ import seaborn as sns
 
 
 #-----------------------------------------------------------------------------------------
-def plot_fitSummary(path):
+def fit_summary(plotdata, outputdir):
     '''
     Plots summarizing the fit
 
     Parameters
     ----------
-    path : str
-        Complete path of the folder containing the fitted data 
+    plotdata : dict
+        Contains all the necessary information including the observed data and fitted
+        parameters 
+    outputdir : str
+        Complete path of the output folder 
 
     Return
     ------
@@ -24,32 +28,31 @@ def plot_fitSummary(path):
     '''
 #-----------------------------------------------------------------------------------------
 
-    # Load data
-    header, obsData, fitData, rtoData = ug.loadFit(path + "fitData.hdf5")
-    (method, npoly_params, nderiv, regu_param, tol_grad, n_guess, tauhe, 
-        dtauhe, taucz, dtaucz) = header
-    freq, num_of_n, delta_nu, vmin, vmax, freqDif2, icov = obsData
-    param, chi2, reg, ier = fitData
+    method = plotdata["method"] 
+    npoly_params = plotdata["npoly_params"] 
+    tauhe = plotdata["tauhe"] 
+    dtauhe = plotdata["dtauhe"] 
+    taucz = plotdata["taucz"] 
+    dtaucz = plotdata["dtaucz"] 
+    freq = plotdata["freq"] 
+    num_of_n = plotdata["num_of_n"] 
+    delta_nu = plotdata["delta_nu"] 
+    vmin = plotdata["vmin"] 
+    vmax = plotdata["vmax"] 
+    freqDif2 = plotdata["freqDif2"] 
+    param = plotdata["param"] 
 
     # Number of harmonic degrees and realizations
     num_of_l = len(num_of_n)
-    n_rln = len(ier) - 1
-
-    # Glitch parameters for successfully fitted realizations
-    param_rln, ier_rln = param[0:n_rln, :], ier[0:n_rln]
-    param_rln = param_rln[ier_rln == 0, :]
-    nfit_rln = param_rln.shape[0]
+    n_rln = param.shape[0] - 1
 
     # Average amplitudes
-    Ahe_rln = np.zeros(nfit_rln)
-    Acz_rln = np.zeros(nfit_rln)
-    for i in range(nfit_rln):
-        Acz_rln[i], Ahe_rln[i] = sg.averageAmplitudes(
-            param_rln[i, :], vmin, vmax, delta_nu=delta_nu, method=method
+    Ahe = np.zeros(n_rln+1)
+    Acz = np.zeros(n_rln+1)
+    for i in range(n_rln+1):
+        Acz[i], Ahe[i] = sg.averageAmplitudes(
+            param[i, :], vmin, vmax, delta_nu=delta_nu, method=method
         )
-    Acz_orig, Ahe_orig = sg.averageAmplitudes(
-        param[-1, :], vmin, vmax, delta_nu=delta_nu, method=method
-    )
 
     # Initial guesses for various acoutic depths 
     acousticRadius = 5.e5 / delta_nu
@@ -160,7 +163,7 @@ def plot_fitSummary(path):
     ax.tick_params(axis='x', labelsize=18, which='both', direction='inout',
         pad=3)
 
-    xmajor, xminor = majMinTick(xmin-20., xmax+20., nxmajor=6, nxminor=5)
+    xmajor, xminor = ug.majMinTick(xmin-20., xmax+20., nxmajor=6, nxminor=5)
     ax.set_xlim(left=xmin-20., right=xmax+20.)
     minLoc = MultipleLocator(xminor)
     ax.xaxis.set_minor_locator(minLoc)
@@ -170,7 +173,7 @@ def plot_fitSummary(path):
 
     ymax = np.amax(abs(obsSignal)) + 0.1
     ymin = -ymax
-    ymajor, yminor = majMinTick(ymin, ymax, nxmajor=7, nxminor=5)
+    ymajor, yminor = ug.majMinTick(ymin, ymax, nxmajor=7, nxminor=5)
     ax.set_ylim(bottom=ymin, top=ymax)
     minLoc = MultipleLocator(yminor)
     ax.yaxis.set_minor_locator(minLoc)
@@ -178,7 +181,7 @@ def plot_fitSummary(path):
     ax.yaxis.set_major_locator(majLoc)
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
 
-    fig.savefig(path + "fit.png", dpi=400, bbox_inches='tight')
+    fig.savefig(os.path.join(outputdir, "fit.png"), dpi=400, bbox_inches='tight')
     plt.close(fig)
 
 
@@ -195,12 +198,12 @@ def plot_fitSummary(path):
     ax1 = fig.add_subplot(221)
     ax1.set_rasterization_zorder(-1)
     
-    Ahe, AheNErr, AhePErr = ug.medianAndErrors(Ahe_rln)
-    xmin = max(0., Ahe - 10. * AheNErr)
-    xmax = Ahe + 10. * AhePErr 
+    med_Ahe, AheNErr, AhePErr = ug.medianAndErrors(Ahe[0:n_rln])
+    xmin = max(0., med_Ahe - 10. * AheNErr)
+    xmax = med_Ahe + 10. * AhePErr 
 
-    ax1.hist(Ahe_rln, bins=np.linspace(xmin, xmax, 50), color=colorList[0])
-    ax1.axvline(x=Ahe_orig, ls="-", color='k', lw=1)
+    ax1.hist(Ahe[0:n_rln], bins=np.linspace(xmin, xmax, 50), color=colorList[0])
+    ax1.axvline(x=Ahe[-1], ls="-", color='k', lw=1)
 
     ax1.set_xlabel(
         r'$\langle A_{\rm He} \rangle \ (\mu {\rm Hz})$', fontsize=11, labelpad=1
@@ -209,7 +212,7 @@ def plot_fitSummary(path):
     ax1.tick_params(axis='y', labelsize=9, which='both', direction='inout', pad=1)
     ax1.tick_params(axis='x', labelsize=9, which='both', direction='inout', pad=1)
 
-    xmajor, xminor = majMinTick(xmin, xmax, nxmajor=4, nxminor=5)
+    xmajor, xminor = ug.majMinTick(xmin, xmax, nxmajor=4, nxminor=5)
     ax1.set_xlim(left=xmin, right=xmax)
     minLoc = MultipleLocator(xminor)
     ax1.xaxis.set_minor_locator(minLoc)
@@ -218,7 +221,7 @@ def plot_fitSummary(path):
     ax1.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
 
     ymin, ymax = ax1.get_ylim()
-    ymajor, yminor = majMinTick(ymin, ymax, nxmajor=4, nxminor=5)
+    ymajor, yminor = ug.majMinTick(ymin, ymax, nxmajor=4, nxminor=5)
     ax1.set_ylim(bottom=ymin, top=ymax)
     minLoc = MultipleLocator(yminor)
     ax1.yaxis.set_minor_locator(minLoc)
@@ -230,11 +233,11 @@ def plot_fitSummary(path):
     ax2 = fig.add_subplot(222)
     ax2.set_rasterization_zorder(-1)
     
-    Dhe, DheNErr, DhePErr = ug.medianAndErrors(param_rln[:, -3])
+    Dhe, DheNErr, DhePErr = ug.medianAndErrors(param[0:n_rln, -3])
     xmin = max(0., Dhe - 10. * DheNErr)
     xmax = min(acousticRadius, Dhe + 10. * DhePErr)
 
-    ax2.hist(param_rln[:, -3], bins=np.linspace(xmin, xmax, 50), color=colorList[0])
+    ax2.hist(param[0:n_rln, -3], bins=np.linspace(xmin, xmax, 50), color=colorList[0])
     ax2.axvline(x=param[-1, -3], ls="-", color='k', lw=1)
     
     ax2.set_xlabel(r'$\Delta_{\rm He}$ ({\rm s})', fontsize=11, labelpad=1)
@@ -242,7 +245,7 @@ def plot_fitSummary(path):
     ax2.tick_params(axis='y', labelsize=9, which='both', direction='inout', pad=1)
     ax2.tick_params(axis='x', labelsize=9, which='both', direction='inout', pad=1)
 
-    xmajor, xminor = majMinTick(xmin, xmax, nxmajor=4, nxminor=5)
+    xmajor, xminor = ug.majMinTick(xmin, xmax, nxmajor=4, nxminor=5)
     ax2.set_xlim(left=xmin, right=xmax)
     minLoc = MultipleLocator(xminor)
     ax2.xaxis.set_minor_locator(minLoc)
@@ -251,7 +254,7 @@ def plot_fitSummary(path):
     ax2.xaxis.set_major_formatter(FormatStrFormatter('%d'))
 
     ymin, ymax = ax2.get_ylim()
-    ymajor, yminor = majMinTick(ymin, ymax, nxmajor=4, nxminor=5)
+    ymajor, yminor = ug.majMinTick(ymin, ymax, nxmajor=4, nxminor=5)
     ax2.set_ylim(bottom=ymin, top=ymax)
     minLoc = MultipleLocator(yminor)
     ax2.yaxis.set_minor_locator(minLoc)
@@ -263,11 +266,11 @@ def plot_fitSummary(path):
     ax3 = fig.add_subplot(223)
     ax3.set_rasterization_zorder(-1)
     
-    The, TheNErr, ThePErr = ug.medianAndErrors(param_rln[:, -2])
+    The, TheNErr, ThePErr = ug.medianAndErrors(param[0:n_rln, -2])
     xmin = max(0., The - 10. * TheNErr)
     xmax = min(acousticRadius, The + 10. * ThePErr)
 
-    ax3.hist(param_rln[:, -2], bins=np.linspace(xmin, xmax, 50), color=colorList[0])
+    ax3.hist(param[0:n_rln, -2], bins=np.linspace(xmin, xmax, 50), color=colorList[0])
     ymin, ymax = ax3.get_ylim()
     ax3.plot((tauhe - dtauhe, tauhe + dtauhe), (ymax, ymax), 'k-', lw=0.5)
     ax3.axvline(x=param[-1, -2], ls="-", color="k", lw=1)
@@ -277,7 +280,7 @@ def plot_fitSummary(path):
     ax3.tick_params(axis='y', labelsize=9, which='both', direction='inout', pad=1)
     ax3.tick_params(axis='x', labelsize=9, which='both', direction='inout', pad=1)
 
-    xmajor, xminor = majMinTick(xmin, xmax, nxmajor=4, nxminor=5)
+    xmajor, xminor = ug.majMinTick(xmin, xmax, nxmajor=4, nxminor=5)
     ax3.set_xlim(left=xmin, right=xmax)
     minLoc = MultipleLocator(xminor)
     ax3.xaxis.set_minor_locator(minLoc)
@@ -286,7 +289,7 @@ def plot_fitSummary(path):
     ax3.xaxis.set_major_formatter(FormatStrFormatter('%d'))
 
     ymin, ymax = ax3.get_ylim()
-    ymajor, yminor = majMinTick(ymin, ymax, nxmajor=4, nxminor=5)
+    ymajor, yminor = ug.majMinTick(ymin, ymax, nxmajor=4, nxminor=5)
     ax3.set_ylim(bottom=ymin, top=ymax)
     minLoc = MultipleLocator(yminor)
     ax3.yaxis.set_minor_locator(minLoc)
@@ -300,7 +303,7 @@ def plot_fitSummary(path):
     
     xmin, xmax = 0., 2. * np.pi 
 
-    ax4.hist(param_rln[:, -1], bins=np.linspace(xmin, xmax, 50), color=colorList[0])
+    ax4.hist(param[0:n_rln, -1], bins=np.linspace(xmin, xmax, 50), color=colorList[0])
     ax4.axvline(x=param[-1, -1], ls="-", color="k", lw=1)
     
     ax4.set_xlabel(r'$\phi_{\rm He}$', fontsize=11, labelpad=1)
@@ -308,7 +311,7 @@ def plot_fitSummary(path):
     ax4.tick_params(axis='y', labelsize=9, which='both', direction='inout', pad=1)
     ax4.tick_params(axis='x', labelsize=9, which='both', direction='inout', pad=1)
 
-    xmajor, xminor = majMinTick(xmin, xmax, nxmajor=4, nxminor=5)
+    xmajor, xminor = ug.majMinTick(xmin, xmax, nxmajor=4, nxminor=5)
     ax4.set_xlim(left=xmin, right=xmax)
     minLoc = MultipleLocator(xminor)
     ax4.xaxis.set_minor_locator(minLoc)
@@ -317,7 +320,7 @@ def plot_fitSummary(path):
     ax4.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
 
     ymin, ymax = ax4.get_ylim()
-    ymajor, yminor = majMinTick(ymin, ymax, nxmajor=4, nxminor=5)
+    ymajor, yminor = ug.majMinTick(ymin, ymax, nxmajor=4, nxminor=5)
     ax4.set_ylim(bottom=ymin, top=ymax)
     minLoc = MultipleLocator(yminor)
     ax4.yaxis.set_minor_locator(minLoc)
@@ -325,7 +328,7 @@ def plot_fitSummary(path):
     ax4.yaxis.set_major_locator(majLoc)
     ax4.yaxis.set_major_formatter(FormatStrFormatter('%d'))
 
-    fig.savefig(path + "heliumDist.png", dpi=400, bbox_inches='tight')
+    fig.savefig(os.path.join(outputdir, "heliumDist.png"), dpi=400, bbox_inches='tight')
     plt.close(fig)
 
 
@@ -342,16 +345,13 @@ def plot_fitSummary(path):
     ax1 = fig.add_subplot(311)
     ax1.set_rasterization_zorder(-1)
     
-    Acz, AczNErr, AczPErr = ug.medianAndErrors(Acz_rln)
-    xmin = max(0., Acz - 10. * AczNErr)
-    xmax = Acz + 10. * AczPErr 
+    med_Acz, AczNErr, AczPErr = ug.medianAndErrors(Acz[0:n_rln])
+    xmin = max(0., med_Acz - 10. * AczNErr)
+    xmax = med_Acz + 10. * AczPErr 
 
-    ax1.hist(Acz_rln, bins=np.linspace(xmin, xmax, 100), color=colorList[0], 
-        label=r''+str(nfit_rln)+'/'+str(n_rln)
-    )
-    ax1.axvline(x=Acz_orig, ls="-", color='k', lw=1)
+    ax1.hist(Acz[0:n_rln], bins=np.linspace(xmin, xmax, 100), color=colorList[0])
+    ax1.axvline(x=Acz[-1], ls="-", color='k', lw=1)
 
-    ax1.legend(loc='upper right', fontsize=9, frameon=False)
     ax1.set_xlabel(
         r'$\langle A_{\rm CZ} \rangle \ (\mu {\rm Hz})$', fontsize=11, labelpad=1
     )
@@ -359,7 +359,7 @@ def plot_fitSummary(path):
     ax1.tick_params(axis='y', labelsize=9, which='both', direction='inout', pad=1)
     ax1.tick_params(axis='x', labelsize=9, which='both', direction='inout', pad=1)
 
-    xmajor, xminor = majMinTick(xmin, xmax, nxmajor=7, nxminor=5)
+    xmajor, xminor = ug.majMinTick(xmin, xmax, nxmajor=7, nxminor=5)
     ax1.set_xlim(left=xmin, right=xmax)
     minLoc = MultipleLocator(xminor)
     ax1.xaxis.set_minor_locator(minLoc)
@@ -368,7 +368,7 @@ def plot_fitSummary(path):
     ax1.xaxis.set_major_formatter(FormatStrFormatter('%.3f'))
 
     ymin, ymax = ax1.get_ylim()
-    ymajor, yminor = majMinTick(ymin, ymax, nxmajor=4, nxminor=5)
+    ymajor, yminor = ug.majMinTick(ymin, ymax, nxmajor=4, nxminor=5)
     ax1.set_ylim(bottom=ymin, top=ymax)
     minLoc = MultipleLocator(yminor)
     ax1.yaxis.set_minor_locator(minLoc)
@@ -380,11 +380,11 @@ def plot_fitSummary(path):
     ax2 = fig.add_subplot(312)
     ax2.set_rasterization_zorder(-1)
     
-    Tcz, TczNErr, TczPErr = ug.medianAndErrors(param_rln[:, -6])
+    Tcz, TczNErr, TczPErr = ug.medianAndErrors(param[0:n_rln, -6])
     xmin = max(0., Tcz - 10. * TczNErr)
     xmax = min(acousticRadius, Tcz + 10. * TczPErr)
 
-    ax2.hist(param_rln[:, -6], bins=np.linspace(xmin, xmax, 100), color=colorList[0])
+    ax2.hist(param[0:n_rln, -6], bins=np.linspace(xmin, xmax, 100), color=colorList[0])
     ymin, ymax = ax2.get_ylim()
     ax2.plot((taucz - dtaucz, taucz + dtaucz), (ymax, ymax), 'k-', lw=0.5)
     ax2.axvline(x=param[-1, -6], ls="-", color="k", lw=1)
@@ -394,7 +394,7 @@ def plot_fitSummary(path):
     ax2.tick_params(axis='y', labelsize=9, which='both', direction='inout', pad=1)
     ax2.tick_params(axis='x', labelsize=9, which='both', direction='inout', pad=1)
 
-    xmajor, xminor = majMinTick(xmin, xmax, nxmajor=6, nxminor=5)
+    xmajor, xminor = ug.majMinTick(xmin, xmax, nxmajor=6, nxminor=5)
     ax2.set_xlim(left=xmin, right=xmax)
     minLoc = MultipleLocator(xminor)
     ax2.xaxis.set_minor_locator(minLoc)
@@ -403,7 +403,7 @@ def plot_fitSummary(path):
     ax2.xaxis.set_major_formatter(FormatStrFormatter('%d'))
 
     ymin, ymax = ax2.get_ylim()
-    ymajor, yminor = majMinTick(ymin, ymax, nxmajor=4, nxminor=5)
+    ymajor, yminor = ug.majMinTick(ymin, ymax, nxmajor=4, nxminor=5)
     ax2.set_ylim(bottom=ymin, top=ymax)
     minLoc = MultipleLocator(yminor)
     ax2.yaxis.set_minor_locator(minLoc)
@@ -417,7 +417,7 @@ def plot_fitSummary(path):
     
     xmin, xmax = 0., 2. * np.pi 
 
-    ax3.hist(param_rln[:, -5], bins=np.linspace(xmin, xmax, 100), color=colorList[0])
+    ax3.hist(param[0:n_rln, -5], bins=np.linspace(xmin, xmax, 100), color=colorList[0])
     ax3.axvline(x=param[-1, -5], ls="-", color="k", lw=1)
     
     ax3.set_xlabel(r'$\phi_{\rm CZ}$', fontsize=11, labelpad=1)
@@ -425,7 +425,7 @@ def plot_fitSummary(path):
     ax3.tick_params(axis='y', labelsize=9, which='both', direction='inout', pad=1)
     ax3.tick_params(axis='x', labelsize=9, which='both', direction='inout', pad=1)
 
-    xmajor, xminor = majMinTick(xmin, xmax, nxmajor=7, nxminor=5)
+    xmajor, xminor = ug.majMinTick(xmin, xmax, nxmajor=7, nxminor=5)
     ax3.set_xlim(left=xmin, right=xmax)
     minLoc = MultipleLocator(xminor)
     ax3.xaxis.set_minor_locator(minLoc)
@@ -434,7 +434,7 @@ def plot_fitSummary(path):
     ax3.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
 
     ymin, ymax = ax3.get_ylim()
-    ymajor, yminor = majMinTick(ymin, ymax, nxmajor=4, nxminor=5)
+    ymajor, yminor = ug.majMinTick(ymin, ymax, nxmajor=4, nxminor=5)
     ax3.set_ylim(bottom=ymin, top=ymax)
     minLoc = MultipleLocator(yminor)
     ax3.yaxis.set_minor_locator(minLoc)
@@ -442,7 +442,9 @@ def plot_fitSummary(path):
     ax3.yaxis.set_major_locator(majLoc)
     ax3.yaxis.set_major_formatter(FormatStrFormatter('%d'))
 
-    fig.savefig(path + "convectionDist.png", dpi=400, bbox_inches='tight')
+    fig.savefig(
+        os.path.join(outputdir, "convectionDist.png"), dpi=400, bbox_inches='tight'
+    )
     plt.close(fig)
 
     return
@@ -450,7 +452,7 @@ def plot_fitSummary(path):
 
 
 #-----------------------------------------------------------------------------------------
-def plot_correlations(cov, filename="./correlations.png"):
+def correlations(cov, outputdir):
     """
     Plot correlation matrix 
 
@@ -458,8 +460,8 @@ def plot_correlations(cov, filename="./correlations.png"):
     ----------
     cov : array
         Covariance matrix
-    filename : str
-        File name (including full path) for the plot
+    outputdir : str
+        Complete path of the output folder 
 
     Return
     ------
@@ -491,39 +493,9 @@ def plot_correlations(cov, filename="./correlations.png"):
     plt.xlim(0, n)
     plt.ylim(n, 0)
     
-    plt.savefig(filename, dpi=400, bbox_inches='tight')
+    plt.savefig(
+        os.path.join(outputdir, "correlations.png"), dpi=400, bbox_inches='tight'
+    )
     plt.close(fig)
 
     return
-
-
-
-#-----------------------------------------------------------------------------------------
-def majMinTick(xmin, xmax, nxmajor=7, nxminor=5):
-    '''
-    Calculate step sizes for major and minor tick levels
-
-    Parameters
-    ----------
-    xmin : float
-        Minimum value of x
-    xmax : float
-        Maximum value of x
-    nxmajor : int 
-        Typical number of required major ticks on the x-axis
-    nxminor : int 
-        Number of required minor ticks between two consecutive major ticks on the x-axis
-
-    Return
-    ------
-    xmajor : float
-        Step size for major ticks on the x-axis
-    xminor : float
-        Step size for minor ticks on the x-axis
-    '''
-#-----------------------------------------------------------------------------------------
-
-    xmajor = float("{:.0e}".format((xmax - xmin) / nxmajor))
-    xminor = xmajor / nxminor
-
-    return xmajor, xminor
