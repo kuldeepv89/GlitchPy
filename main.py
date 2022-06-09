@@ -188,7 +188,7 @@ def main():
         # Fit the glitch signatures
         print ()
         print ("* Fitting data... ")
-        param, chi2, reg, ier, ratio = sg.fit(
+        param, chi2, reg, ier, ratio, dnu = sg.fit(
             freq, 
             num_of_n, 
             delta_nu, 
@@ -249,6 +249,8 @@ def main():
         if rtype is not None:
             ratio_rln = ratio[0:n_rln, :]
             ratio_rln = ratio_rln[ier_rln == 0, :]
+            dnu_rln = dnu[0:n_rln]
+            dnu_rln = dnu_rln[ier_rln == 0]
 
         # Compute average amplitudes of the He and CZ signatures
         Acz_rln, Ahe_rln = np.zeros(nfit_rln), np.zeros(nfit_rln)
@@ -265,6 +267,7 @@ def main():
         param_rln = param_rln[Ahe_rln>1e-8, :]
         if rtype is not None:
             ratio_rln = ratio_rln[Ahe_rln>1e-8, :]
+            dnu_rln = dnu_rln[Ahe_rln>1e-8]
         Acz_rln = Acz_rln[Ahe_rln>1e-8]
         Ahe_rln = Ahe_rln[Ahe_rln>1e-8]
         nfit_rln = param_rln.shape[0]
@@ -334,6 +337,7 @@ def main():
         grparams[:, 2] = param_rln[:, -2]
         if rtype is not None:
             grparams = np.hstack((ratio_rln, grparams))
+            #grparams = np.hstack((dnu_rln.reshape(nfit_rln, 1), grparams))
     
         # Compute the median values
         ngr = grparams.shape[1]
@@ -365,6 +369,31 @@ def main():
                 "Check the covariance..." %(rdif)
             )
     
+        # Print the observables with uncertainties from covariance matrix
+        print ()
+        print ("The observables with uncertainties from covariance matrix:")
+        for i in range(ngr):
+            if i == ngr-3:
+                print (
+                    "    - median Ahe, err: (%.4f, %.4f)" 
+                    %(gr[i], np.sqrt(gr_cov[i, i]))
+                )
+            elif i == ngr-2:
+                print (
+                    "    - median Dhe, err: (%.3f, %.3f)" 
+                    %(gr[i], np.sqrt(gr_cov[i, i]))
+                )
+            elif i == ngr-1:
+                print (
+                    "    - median The, err: (%.2f, %.2f)" 
+                    %(gr[i], np.sqrt(gr_cov[i, i]))
+                )
+            else:
+                print (
+                    "    - n, freq, median ratio, err: (%d, %.2f, %.5f, %.5f)" 
+                    %(int(round(norder[i-1])), frq[i-1], gr[i], np.sqrt(gr_cov[i, i]))
+                )
+
         # Plot the correlation matrix
         plots.correlations(gr_cov, outputdir)
     
@@ -407,6 +436,7 @@ def main():
                 ff.create_dataset('rto/ratio', data=ratio)
                 ff.create_dataset('rto/norder', data=norder)
                 ff.create_dataset('rto/frq', data=frq)
+                ff.create_dataset('rto/dnu', data=dnu)
     
             ff.create_dataset('cov/params', data=gr)
             ff.create_dataset('cov/cov', data=gr_cov)

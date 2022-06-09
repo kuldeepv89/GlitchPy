@@ -216,8 +216,11 @@ def fit(freq, num_of_n, delta_nu, num_of_dif2=None, freqDif2=None, icov=None,
             _, _, tmp = ug.specific_ratio(freq, rtype=rtype)
             ratio = np.zeros((n_rln+1, len(tmp)), dtype=float)
             ratio[-1, :] = tmp
+            dnu = np.zeros(n_rln+1, dtype=float)
+            dnu[-1] = ug.dnu0(freq, numax=None, weight="none")
         else:
             ratio = None
+            dnu = None
 
         # Fit realizations
         if n_rln > 0:
@@ -243,6 +246,7 @@ def fit(freq, num_of_n, delta_nu, num_of_dif2=None, freqDif2=None, icov=None,
                 # --> Ratios
                 if rtype is not None:
                     _, _, ratio[i, :] = ug.specific_ratio(freq_rln, rtype=rtype)
+                    dnu[i] = ug.dnu0(freq_rln, numax=None, weight="none")
 
     # Fit second differences
     elif method.lower() == 'sd':
@@ -280,8 +284,11 @@ def fit(freq, num_of_n, delta_nu, num_of_dif2=None, freqDif2=None, icov=None,
             _, _, tmp = ug.specific_ratio(freq, rtype=rtype)
             ratio = np.zeros((n_rln+1, len(tmp)), dtype=float)
             ratio[-1, :] = tmp
+            dnu = np.zeros(n_rln+1, dtype=float)
+            dnu[-1] = ug.dnu0(freq, numax=None, weight="none")
         else:
             ratio = None
+            dnu = None
 
         # Fit realizations
         if n_rln > 0:
@@ -308,11 +315,12 @@ def fit(freq, num_of_n, delta_nu, num_of_dif2=None, freqDif2=None, icov=None,
                 # --> Ratios
                 if rtype is not None:
                     _, _, ratio[i, :] = ug.specific_ratio(freq_rln, rtype=rtype)
+                    dnu[i] = ug.dnu0(freq_rln, numax=None, weight="none")
 
     else:
         raise ValueError ("Unrecognized fitting method %s!" %(method))
 
-    return (param, chi2, reg, ier, ratio)
+    return (param, chi2, reg, ier, ratio, dnu)
 
 
 

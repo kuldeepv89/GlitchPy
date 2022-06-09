@@ -293,6 +293,56 @@ def specific_ratio(frq, rtype="r012"):
     return (norder, frequency, ratio)
 
 
+    
+#-----------------------------------------------------------------------------------------
+def dnu0(frq, numax=None, weight="none"):
+#-----------------------------------------------------------------------------------------
+    """
+    Routine to compute the large frequency separation using radial modes
+ 
+    Parameters
+    ----------
+    frq : array
+        Harmonic degrees, radial orders, frequencies
+    numax : float
+        Frequency of maximum power 
+        Used only if weight = "white" (see below)
+    weight : str
+        Weight in the linear least-squares fitting
+        If weight = "white", apply weight following White et al. (2011)
+        If weight = "sigma" (default), weight with the uncertainties on the frequencies 
+        If weight = "none", no weight 
+
+    Returns
+    -------
+    dnu : float
+        Large frequency separation
+    """
+
+    yfitdnu = frq[np.rint(frq[:, 0]).astype(int) == 0, 2]
+    xfitdnu = frq[np.rint(frq[:, 0]).astype(int) == 0, 1]
+
+    if weight.lower() == "white":
+        FWHM_sigma = 2.0 * np.sqrt(2.0 * np.log(2.0))
+        wfitdnu = np.exp(
+            -1.0
+            * np.power(yfitdnu - numax, 2)
+            / (2 * np.power(0.25 * numax / FWHM_sigma, 2.0))
+        )
+        fitcoef = np.polyfit(xfitdnu, yfitdnu, 1, w=np.sqrt(wfitdnu))
+    elif weight.lower() == "sigma":
+        wfitdnu = frq[np.rint(frq[:, 0]).astype(int) == 0, 3]
+        fitcoef = np.polyfit(xfitdnu, yfitdnu, 1, w=1./wfitdnu)
+    elif weight.lower() == "none":
+        fitcoef = np.polyfit(xfitdnu, yfitdnu, 1)
+    else:
+        raise ValueError("Unrecognized weight %s!" %(weight))
+
+    dnu = fitcoef[0]
+
+    return dnu
+
+
 
 #-----------------------------------------------------------------------------------------
 class Logger(object):
