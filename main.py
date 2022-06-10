@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 import numpy as np
 import h5py
 from sklearn.covariance import MinCovDet
@@ -31,7 +32,7 @@ def main():
     
     
     # Number of realizations to fit for uncertainties/covariance matrix estimation
-    n_rln = 10000
+    n_rln = 1000
     
     
     # Ratio type ("r01", "r10", "r02", "r010", "r012", "r102")
@@ -124,9 +125,14 @@ def main():
         ug.prt_center("https://github.com/kuldeepv89/GlitchPy", 88)
         print (88 * "=")
     
+        # Print local time
+        t0 = time.localtime()
+        print(
+            "\nRun started on {0}.\n\n".format(time.strftime("%Y-%m-%d %H:%M:%S", t0))
+        )
+
         # Print star name/ID
-        print ()
-        print ("Star name/ID: %s" %(star))
+        print ("Analysing star: %s" %(star))
     
     
         # Load observed oscillation frequencies
@@ -142,8 +148,7 @@ def main():
             nu_max = np.amax(freq[:, 2])
         else:
             nu_max = vmax
-        print ()
-        print ("The observed data:")
+        print ("\nThe observed data:")
         print ("    - total number of modes: %d" %(num_of_mode))
         print ("    - number of n for each l:", num_of_n)
         print (
@@ -165,8 +170,7 @@ def main():
         
     
         # Print fitting-method related information
-        print ()
-        print ("The fitting method and associated parameters:")
+        print ("\nThe fitting method and associated parameters:")
         print ("    - fitting method: %s" %(method))
         print (
             "    - degree of polynomial for smooth component: %d" %(npoly_params - 1)
@@ -177,8 +181,7 @@ def main():
         print ("    - number of attempts in global minimum search: %d" %(n_guess))
     
         # Print miscellaneous information    
-        print ()
-        print ("Miscellaneous information:")
+        print ("\nMiscellaneous information:")
         print ("    - number of realizations: %d" %(n_rln))
         print ("    - tauhe, dtauhe: ({0}, {1})".format(tauhe, dtauhe))
         print ("    - taucz, dtaucz: ({0}, {1})".format(taucz, dtaucz))
@@ -186,8 +189,7 @@ def main():
     
     
         # Fit the glitch signatures
-        print ()
-        print ("* Fitting data... ")
+        print ("\n* Fitting data... ")
         param, chi2, reg, ier, ratio, dnu = sg.fit(
             freq, 
             num_of_n, 
@@ -211,16 +213,13 @@ def main():
         print ("* Done!")
 
         # Print chi-square of the fit (to the observed data) 
-        print ()
-        print ("The summary of the fit:")
+        print ("\nThe summary of the fit:")
         if method.lower() == "fq":
             dof = freq.shape[0] - param.shape[1]
         elif method.lower() == "sd":
             dof = freqDif2.shape[0] - param.shape[1]
         if dof <= 0:
-            print ()
-            print ("WARNING: Degree of freedom %d <= 0! Setting it to 1..." %(dof))
-            print ()
+            print ("\nWARNING: Degree of freedom %d <= 0! Setting it to 1...\n" %(dof))
             dof = 1
         rchi2 = chi2[-1] / dof
         print ("    - total and reduced chi-squares: (%.4f, %.4f)" %(chi2[-1], rchi2))
@@ -370,8 +369,7 @@ def main():
             )
     
         # Print the observables with uncertainties from covariance matrix
-        print ()
-        print ("The observables with uncertainties from covariance matrix:")
+        print ("\nThe observables with uncertainties from covariance matrix:")
         for i in range(ngr):
             if i == ngr-3:
                 print (
@@ -391,7 +389,7 @@ def main():
             else:
                 print (
                     "    - n, freq, median ratio, err: (%d, %.2f, %.5f, %.5f)" 
-                    %(int(round(norder[i-1])), frq[i-1], gr[i], np.sqrt(gr_cov[i, i]))
+                    %(int(round(norder[i])), frq[i], gr[i], np.sqrt(gr_cov[i, i]))
                 )
 
         # Plot the correlation matrix
@@ -399,8 +397,6 @@ def main():
     
         # Write the results to HDF5 file
         outfile = os.path.join(outputdir, "results.hdf5")  
-        if os.path.isfile(outfile):
-            os.remove(outfile)
         with h5py.File(outfile, "w") as ff:
             ff.create_dataset('header/method', data=method)
             ff.create_dataset('header/npoly_params', data=npoly_params)
@@ -440,6 +436,13 @@ def main():
     
             ff.create_dataset('cov/params', data=gr)
             ff.create_dataset('cov/cov', data=gr_cov)
+
+        # Print completion time 
+        t1 = time.localtime()
+        print(
+            "\nFinished on {0}".format(time.strftime("%Y-%m-%d %H:%M:%S", t1)),
+            "(runtime {0} s).".format(time.mktime(t1) - time.mktime(t0)),
+        )
 
         # Save log file
         sys.stdout = stdout
