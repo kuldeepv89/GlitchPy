@@ -18,13 +18,13 @@ def main():
     #     file name to be stars.txt, which is present in the folder path/
     # --> Output results go to the folder path/star_method/ (where method is 
     #     either FQ or SD, see below)
-    path = "/Users/au572692/gitProjects/GlitchPy/example"
+    path = "example"
     stars = ["16cyga"]
     
     
     # Number of harmonic degrees to read from the data file starting from the
     #    radial modes (i.e. if num_of_l = 1, read only l = 0 modes)
-    num_of_l = 4 
+    num_of_l = 4
     
     
     # Fitting method (frequencies: "FQ"; second differences: "SD")
