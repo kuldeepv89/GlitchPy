@@ -7,6 +7,8 @@ from sklearn.covariance import MinCovDet
 import supportGlitch as sg
 import utils_general as ug
 import plots
+import warnings
+warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 
 
