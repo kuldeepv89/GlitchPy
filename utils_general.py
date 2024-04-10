@@ -43,61 +43,23 @@ def ratios(frq):
 
     # Isolate l = 0 modes
     f0 = freq[freq[:]["l"] == 0]
-    if (len(f0) == 0) or (len(f0) != f0[-1]["n"] - f0[0]["n"] + 1):
-        # Missing modes detected (not implemented)!
-        r02, r01, r10 = None, None, None
-        return r02, r01, r10
+    if len(f0) == 0:
+        raise ValueError("ERROR: Radial modes not found!")
+    else:
+        if len(f0) != f0[-1]["n"] - f0[0]["n"] + 1:
+            # Missing radial order (not implemented)!
+            r02, r01, r10 = None, None, None
+            return r02, r01, r10
 
     # Isolate l = 1 modes
     f1 = freq[freq[:]["l"] == 1]
-    if (len(f1) == 0) or (len(f1) != f1[-1]["n"] - f1[0]["n"] + 1):
-        # Missing modes detected (not implemented)!
-        r02, r01, r10 = None, None, None
-        return r02, r01, r10
-
-    # Isolate l = 2 modes
-    f2 = freq[freq[:]["l"] == 2]
-    if (len(f2) == 0) or (len(f2) != f2[-1]["n"] - f2[0]["n"] + 1):
-        # Missing modes detected (not implemented)!
-        r02, r01, r10 = None, None, None
-        return r02, r01, r10
-
-    # Two-point frequency ratio
-    # ---------------------------
-    n0 = (f0[0]["n"] - 1, f1[0]["n"], f2[0]["n"])
-    l0 = n0.index(max(n0))
-
-    # Find lowest indices for l = 0, 1, and 2
-    if l0 == 0:
-        i00 = 0
-        i01 = f0[0]["n"] - f1[0]["n"] - 1
-        i02 = f0[0]["n"] - f2[0]["n"] - 1
-    elif l0 == 1:
-        i00 = f1[0]["n"] - f0[0]["n"] + 1
-        i01 = 0
-        i02 = f1[0]["n"] - f2[0]["n"]
-    elif l0 == 2:
-        i00 = f2[0]["n"] - f0[0]["n"] + 1
-        i01 = f2[0]["n"] - f1[0]["n"]
-        i02 = 0
-
-    # Number of r02s
-    nn = (f0[-1]["n"], f1[-1]["n"], f2[-1]["n"] + 1)
-    ln = nn.index(min(nn))
-    if ln == 0:
-        nr02 = f0[-1]["n"] - f0[i00]["n"] + 1
-    elif ln == 1:
-        nr02 = f1[-1]["n"] - f1[i01]["n"]
-    elif ln == 2:
-        nr02 = f2[-1]["n"] - f2[i02]["n"] + 1
-
-    # R02
-    r02 = np.zeros((nr02, 4))
-    for i in range(nr02):
-        r02[i, 0] = f0[i00 + i]["n"]
-        r02[i, 3] = f0[i00 + i]["freq"]
-        r02[i, 1] = f0[i00 + i]["freq"] - f2[i02 + i]["freq"]
-        r02[i, 1] /= f1[i01 + i + 1]["freq"] - f1[i01 + i]["freq"]
+    if (len(f1) == 0):
+        raise ValueError("ERROR: Dipole modes not found!")
+    else:
+        if len(f1) != f1[-1]["n"] - f1[0]["n"] + 1:
+            # Missing radial order (not implemented)!
+            r02, r01, r10 = None, None, None
+            return r02, r01, r10
 
     # Five-point frequency ratio (R01)
     # ---------------------------------
@@ -157,6 +119,51 @@ def ratios(frq):
         r10[i, 1] -= 4.0 * (f0[i00 + i + 1]["freq"] + f0[i00 + i]["freq"])
         r10[i, 1] /= -8.0 * (f0[i00 + i + 1]["freq"] - f0[i00 + i]["freq"])
 
+    # Isolate l = 2 modes (if available) and compute r02
+    f2 = freq[freq[:]["l"] == 2]
+    if (len(f2) != 0) and (len(f2) == f2[-1]["n"] - f2[0]["n"] + 1):
+
+        # Two-point frequency ratio (R02)
+        # ---------------------------------
+        n0 = (f0[0]["n"] - 1, f1[0]["n"], f2[0]["n"])
+        l0 = n0.index(max(n0))
+
+        # Find lowest indices for l = 0, 1, and 2
+        if l0 == 0:
+            i00 = 0
+            i01 = f0[0]["n"] - f1[0]["n"] - 1
+            i02 = f0[0]["n"] - f2[0]["n"] - 1
+        elif l0 == 1:
+            i00 = f1[0]["n"] - f0[0]["n"] + 1
+            i01 = 0
+            i02 = f1[0]["n"] - f2[0]["n"]
+        elif l0 == 2:
+            i00 = f2[0]["n"] - f0[0]["n"] + 1
+            i01 = f2[0]["n"] - f1[0]["n"]
+            i02 = 0
+
+        # Number of r02s
+        nn = (f0[-1]["n"], f1[-1]["n"], f2[-1]["n"] + 1)
+        ln = nn.index(min(nn))
+        if ln == 0:
+            nr02 = f0[-1]["n"] - f0[i00]["n"] + 1
+        elif ln == 1:
+            nr02 = f1[-1]["n"] - f1[i01]["n"]
+        elif ln == 2:
+            nr02 = f2[-1]["n"] - f2[i02]["n"] + 1
+
+        # R02
+        r02 = np.zeros((nr02, 4))
+        for i in range(nr02):
+            r02[i, 0] = f0[i00 + i]["n"]
+            r02[i, 3] = f0[i00 + i]["freq"]
+            r02[i, 1] = f0[i00 + i]["freq"] - f2[i02 + i]["freq"]
+            r02[i, 1] /= f1[i01 + i + 1]["freq"] - f1[i01 + i]["freq"]
+
+    else:
+        # Quadrupole modes unavailable or missing radial order!
+        r02 = None
+
     return r02, r01, r10
 
 
@@ -193,15 +200,10 @@ def combined_ratios(r02, r01, r10):
     """
 #-----------------------------------------------------------------------------------------
 
-    # Number of ratios
-    n02 = r02.shape[0]
+    # R010 (R01 followed by R10)
     n01 = r01.shape[0]
     n10 = r10.shape[0]
     n010 = n01 + n10
-    n012 = n01 + n02
-    n102 = n10 + n02
-
-    # R010 (R01 followed by R10)
     r010 = np.zeros((n010, 4))
     r010[0:n01, :] = r01[:, :]
     r010[n01 : n01 + n10, 0] = r10[:, 0] + 0.1
@@ -209,21 +211,28 @@ def combined_ratios(r02, r01, r10):
     r010 = r010[r010[:, 0].argsort()]
     r010[:, 0] = np.round(r010[:, 0])
 
-    # R012 (R01 followed by R02)
-    r012 = np.zeros((n012, 4))
-    r012[0:n01, :] = r01[:, :]
-    r012[n01 : n01 + n02, 0] = r02[:, 0] + 0.1
-    r012[n01 : n01 + n02, 1:4] = r02[:, 1:4]
-    r012 = r012[r012[:, 0].argsort()]
-    r012[:, 0] = np.round(r012[:, 0])
+    if r02 is not None:
+        n02 = r02.shape[0]
+        n012 = n01 + n02
+        n102 = n10 + n02
 
-    # R102 (R10 followed by R02)
-    r102 = np.zeros((n102, 4))
-    r102[0:n10, :] = r10[:, :]
-    r102[n10 : n10 + n02, 0] = r02[:, 0] + 0.1
-    r102[n10 : n10 + n02, 1:4] = r02[:, 1:4]
-    r102 = r102[r102[:, 0].argsort()]
-    r102[:, 0] = np.round(r102[:, 0])
+        # R012 (R01 followed by R02)
+        r012 = np.zeros((n012, 4))
+        r012[0:n01, :] = r01[:, :]
+        r012[n01 : n01 + n02, 0] = r02[:, 0] + 0.1
+        r012[n01 : n01 + n02, 1:4] = r02[:, 1:4]
+        r012 = r012[r012[:, 0].argsort()]
+        r012[:, 0] = np.round(r012[:, 0])
+
+        # R102 (R10 followed by R02)
+        r102 = np.zeros((n102, 4))
+        r102[0:n10, :] = r10[:, :]
+        r102[n10 : n10 + n02, 0] = r02[:, 0] + 0.1
+        r102[n10 : n10 + n02, 1:4] = r02[:, 1:4]
+        r102 = r102[r102[:, 0].argsort()]
+        r102[:, 0] = np.round(r102[:, 0])
+    else:
+        r012, r102 = (None, None)
 
     return r010, r012, r102
 
@@ -253,10 +262,11 @@ def specific_ratio(frq, rtype="r012"):
     """
 #-----------------------------------------------------------------------------------------
     
+    if rtype not in ["r02", "r01", "r10", "r010", "r012", "r102"]:
+        raise ValueError("ERROR: Unrecognized ratio-type %s!" %(rtype))
+
     # Compute ratios
     r02, r01, r10 = ratios(frq)
-    if r02 is None:
-        raise ValueError("Error: Missing radial orders!")
 
     # Compute combined ratios (if necessary)
     if rtype in ["r010", "r012", "r102"]:
@@ -271,24 +281,31 @@ def specific_ratio(frq, rtype="r012"):
         norder = r10[:, 0]
         frequency = r10[:, 3]
         ratio = r10[:, 1]
-    elif rtype == "r02":
-        norder = r02[:, 0]
-        frequency = r02[:, 3]
-        ratio = r02[:, 1]
     elif rtype == "r010":
         norder = r010[:, 0]
         frequency = r010[:, 3]
         ratio = r010[:, 1]
+    elif rtype == "r02":
+        if r02 is not None:
+            norder = r02[:, 0]
+            frequency = r02[:, 3]
+            ratio = r02[:, 1]
+        else:
+            norder, frequency, ratio = (None, None, None)
     elif rtype == "r012":
-        norder = r012[:, 0]
-        frequency = r012[:, 3]
-        ratio = r012[:, 1]
+        if r02 is not None:
+            norder = r012[:, 0]
+            frequency = r012[:, 3]
+            ratio = r012[:, 1]
+        else:
+            norder, frequency, ratio = (None, None, None)
     elif rtype == "r102":
-        norder = r102[:, 0]
-        frequency = r102[:, 3]
-        ratio = r102[:, 1]
-    else:
-        raise ValueError("Unrecognized ratio-type %s!" %(rtype))
+        if r02 is not None:
+            norder = r102[:, 0]
+            frequency = r102[:, 3]
+            ratio = r102[:, 1]
+        else:
+            norder, frequency, ratio = (None, None, None)
     
     return (norder, frequency, ratio)
 
