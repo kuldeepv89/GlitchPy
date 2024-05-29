@@ -10,100 +10,44 @@ import plots
 import warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
-
+import xml.etree.ElementTree as ET
+tree=ET.parse('stars.xml')
+root=tree.getroot()
 
 def main():
     """Main"""
 
-    # Path and star names
-    # --> For each "star" in the list "stars" below, assume input frequency 
-    #     file name to be stars.txt, which is present in the folder path/
-    # --> Output results go to the folder path/star_method/ (where method is 
-    #     either FQ or SD, see below)
-    path = "example"
-    stars = ["16cyga"]
+    tauhe1=root[2][0].attrib['value']
+    dtauhe1=root[2][1].attrib['value']
+    taucz1=root[2][2].attrib['value']
+    dtaucz1=root[2][3].attrib['value']
+    vmin1=root[2][4].attrib['value']
+    vmax1=root[2][5].attrib['value']
     
+    # Modes
+    path = root[0][0].attrib['value']
+    stars = [root[0][1].attrib['value']]
+    num_of_l = int(root[0][2].attrib['value'])
+    rtype = root[0][3].attrib['value']
     
-    # Number of harmonic degrees to read from the data file starting from the
-    #    radial modes (i.e. if num_of_l = 1, read only l = 0 modes)
-    num_of_l = 4
-    
-    
-    # Fitting method (frequencies: "FQ"; second differences: "SD")
-    method = "FQ"
-    
-    
-    # Number of realizations to fit for uncertainties/covariance matrix estimation
-    n_rln = 1000
-    
-    
-    # Ratio type ("r01", "r10", "r02", "r010", "r012", "r102")
-    # --> If rtype = None, calculate only glitch properties (ignore ratios)
-    rtype = "r012" 
-    
-    
-    if method.lower() == "fq":
+    # Numerical
+    method = root[1][0].attrib['value']
+    n_rln = int(root[1][1].attrib['value'])
+    npoly_params = int(root[1][2].attrib['value'])
+    nderiv = int(root[1][3].attrib['value'])
+    regu_param = int(root[1][4].attrib['value'])
+    tol_grad = float(root[1][5].attrib['value'])
+    n_guess = int(root[1][6].attrib['value'])
 
-        # Number of parameters in the smooth component (i.e. degree of polynomial + 1)
-        # --> Fourth degree polynomial works quite well 
-        npoly_params = 5
-        
-        # Order of derivative used in the regularization 
-        # --> Third derivative works quite well 
-        nderiv = 3
-        
-        # Regularization parameter
-        # --> A value of about 7 works quite well for above values of npoly_params 
-        #     and nderiv
-        regu_param = 10.
-    
-    elif method.lower() == "sd":
+    # Physical
+    tauhe = None if tauhe1 == 'None' else tauhe1
+    dtauhe = None if dtauhe1 == 'None' else dtauhe1
+    taucz = None if taucz1 == 'None' else taucz1
+    dtaucz = None if dtaucz1 == 'None' else dtaucz1
+    vmin = None if vmin1 == 'None' else vmin1
+    vmax = None if vmax1 == 'None' else vmax1
 
-        # Number of parameters in the smooth component (i.e. degree of polynomial + 1)
-        # --> Second degree polynomial works quite well 
-        npoly_params = 3
-        
-        # Order of derivative used in the regularization 
-        # --> First derivative works quite well 
-        nderiv = 1
-        
-        # Regularization parameter
-        # --> A value of about 1000 works quite well for above values of npoly_params 
-        #     and nderiv
-        regu_param = 1000.
-    
 
-    # Absolute tolerance on gradients during the optimization
-    tol_grad = 0.001
-    
-    
-    # Number of initial guesses to explore the parameter space for finding 
-    #    the global minimum 
-    n_guess = 200
-    
-    
-    # Initial guess for the range of acoustic depth of HeIZ 
-    # --> Range : [tauhe - dtauhe, tauhe + dtauhe]
-    #     if tauhe = None, tauhe = 0.17 * acousticRadius + 18.
-    #     if dtauhe = None, dtauhe = 0.05 * acousticRadius
-    tauhe, dtauhe = None, None
-    
-    
-    # Initial guess for the range of acoustic depth of BCZ 
-    # --> Range : [taucz - dtaucz, taucz + dtaucz]
-    #     if taucz = None, taucz = 0.34 * acousticRadius + 929.
-    #     if dtaucz = None, dtaucz = 0.10 * acousticRadius
-    taucz, dtaucz = None, None
-    
-    
-    # Frequency range for the average amplitude
-    # --> Range : [vmin, vmax]
-    #     if vmin = None, assume minimum value of the fitted frequencies
-    #     if vmax = None, assume maximum value of the fitted frequencies
-    vmin, vmax = None, None
-    
-    
-    
     #========================================================================
     # Parameter specification completed! Code runs automatically from here...
     #========================================================================
