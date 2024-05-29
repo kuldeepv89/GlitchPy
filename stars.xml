@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<stars>
+	<Modes>
+		<path value="example"/>
+		<stars value="16cyga"/>
+		<num_of_l value="4"/>
+		<rtype value="r012"/>
+	</Modes>
+	<Numerical>
+		<method value="FQ"/>
+		<n_rln value="1000"/>
+		<npoly_params value="5"/>
+		<nderiv value="3"/>
+		<regu_param value="10"/>
+		<tol_grad value="0.001"/>
+		<n_guess value="200"/>
+	</Numerical>
+	<Physical>
+		<tauhe value="None"/>
+		<dtauhe value="None"/>
+		<taucz value="None"/>
+		<dtaucz value="None"/>
+		<vmin value="None"/>
+		<vmax value="None"/>
+	</Physical>
+</stars>
+		
