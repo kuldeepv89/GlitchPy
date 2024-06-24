@@ -17,39 +17,59 @@ root=tree.getroot()
 def main():
     """Main"""
 
-    tauhe1=root[2][0].attrib['value']
-    dtauhe1=root[2][1].attrib['value']
-    taucz1=root[2][2].attrib['value']
-    dtaucz1=root[2][3].attrib['value']
-    vmin1=root[2][4].attrib['value']
-    vmax1=root[2][5].attrib['value']
     
-    # Modes
+    # Modes Group
     path = root[0][0].attrib['value']
     stars = [root[0][1].attrib['value']]
     num_of_l = int(root[0][2].attrib['value'])
     rtype = root[0][3].attrib['value']
     
-    # Numerical
+    # Numerical Group
     method = root[1][0].attrib['value']
     n_rln = int(root[1][1].attrib['value'])
     npoly_params = int(root[1][2].attrib['value'])
     nderiv = int(root[1][3].attrib['value'])
-    regu_param = int(root[1][4].attrib['value'])
+    regu_param = float(root[1][4].attrib['value'])
     tol_grad = float(root[1][5].attrib['value'])
     n_guess = int(root[1][6].attrib['value'])
 
-    # Physical
-    tauhe = None if tauhe1 == 'None' else tauhe1
-    dtauhe = None if dtauhe1 == 'None' else dtauhe1
-    taucz = None if taucz1 == 'None' else taucz1
-    dtaucz = None if dtaucz1 == 'None' else dtaucz1
-    vmin = None if vmin1 == 'None' else vmin1
-    vmax = None if vmax1 == 'None' else vmax1
+    # Physical Group
+    if root[2][0].attrib['value'] == 'None':
+        tauhe = None
+    else:
+        tauhe = float(root[2][0].attrib['value'])
+    if root[2][1].attrib['value'] == 'None':
+        dtauhe = None
+    else:
+        dtauhe = float(root[2][1].attrib['value'])
+    if root[2][2].attrib['value'] == 'None':
+        taucz = None
+    else:
+        taucz = float(root[2][2].attrib['value'])
+    if root[2][3].attrib['value'] == 'None':
+        dtaucz = None
+    else:
+        dtaucz = float(root[2][3].attrib['value'])
+    if root[2][4].attrib['value'] == 'None':
+        taucz_min = None
+    else:
+        taucz_min = float(root[2][4].attrib['value'])
+    if root[2][5].attrib['value'] == 'None':
+        taucz_max = None
+    else:
+        taucz_max = float(root[2][5].attrib['value'])
+    if root[2][6].attrib['value'] == 'None':
+        vmin = None
+    else:
+        vmin = float(root[2][6].attrib['value'])
+    if root[2][7].attrib['value'] == 'None':
+        vmax = None
+    else:
+        vmax = float(root[2][7].attrib['value'])
 
 
     #========================================================================
-    # Parameter specification completed! Code runs automatically from here...
+    # Code runs automatically from here...
     #========================================================================
 
     # Loop over stars
@@ -57,7 +77,7 @@ def main():
     
     
         # Start the log file
-        outputdir = os.path.join(path, star + "_" + method)
+        outputdir = os.path.join(path, star + "_" + method+'_Fitting_observed_frequencies(6)')
         if not os.path.isdir(outputdir):
             os.makedirs(outputdir)
         stdout = sys.stdout
@@ -82,16 +102,16 @@ def main():
     
     
         # Load observed oscillation frequencies
-        freqfile = os.path.join(path, star + ".txt")
+        freqfile = os.path.join(path, star + '.txt')
         if not os.path.isfile(freqfile):
             raise FileNotFoundError("Input frequency file not found %s!" %(freqfile))
         freq, num_of_mode, num_of_n, delta_nu = ug.loadFreq(freqfile, num_of_l)
         if vmin is None:
-            nu_min = np.amin(freq[:, 2])
+            nu_min = 1334.28530945
         else:
             nu_min = vmin
         if vmax is None:
-            nu_max = np.amax(freq[:, 2])
+            nu_max = 2994.83963647
         else:
             nu_max = vmax
         print ("\nThe observed data:")
@@ -178,6 +198,8 @@ def main():
         plotdata["dtauhe"] = dtauhe
         plotdata["taucz"] = taucz
         plotdata["dtaucz"] = dtaucz
+        plotdata["taucz_min"]=taucz_min
+        plotdata["taucz_max"]=taucz_max
         plotdata["freq"] = freq
         plotdata["num_of_n"] = num_of_n
         plotdata["delta_nu"] = delta_nu
@@ -191,11 +213,28 @@ def main():
         param_rln, ier_rln = param[0:n_rln, :], ier[0:n_rln]
         param_rln = param_rln[ier_rln == 0, :]
         nfit_rln = param_rln.shape[0]
+
+        # Apply taucz mask if taucz_min != None and/or taucz_max != None
+        if taucz_min is not None:
+            mask1 = param_rln[:, -6] > taucz_min
+        else:
+            mask1 = np.ones(nfit_rln, dtype=bool)
+        if taucz_max is not None:
+            mask2 = param_rln[:, -6] < taucz_max
+        else:
+            mask2 = np.ones(nfit_rln, dtype=bool)
+        mask = np.logical_and(mask1, mask2)
+        param_rln = param_rln[mask, :]
+        nfit_rln = param_rln.shape[0]
+
+        # Extract ratios and large frequency separation
         if rtype is not None:
             ratio_rln = ratio[0:n_rln, :]
             ratio_rln = ratio_rln[ier_rln == 0, :]
+            ratio_rln = ratio_rln[mask, :]
             dnu_rln = dnu[0:n_rln]
             dnu_rln = dnu_rln[ier_rln == 0]
+            dnu_rln = dnu_rln[mask]
 
         # Compute average amplitudes of the He and CZ signatures
         Acz_rln, Ahe_rln = np.zeros(nfit_rln), np.zeros(nfit_rln)
@@ -209,17 +248,17 @@ def main():
             )
 
         # Extract realizations with non-zero average He amplitude
-        param_rln = param_rln[Ahe_rln>1e-8, :]
+        param_rln = param_rln[Ahe_rln>1e-08, :]
         if rtype is not None:
-            ratio_rln = ratio_rln[Ahe_rln>1e-8, :]
-            dnu_rln = dnu_rln[Ahe_rln>1e-8]
-        Acz_rln = Acz_rln[Ahe_rln>1e-8]
-        Ahe_rln = Ahe_rln[Ahe_rln>1e-8]
+            ratio_rln = ratio_rln[Ahe_rln>1e-08, :]
+            dnu_rln = dnu_rln[Ahe_rln>1e-08]
+        Acz_rln = Acz_rln[Ahe_rln>1e-08]
+        Ahe_rln = Ahe_rln[Ahe_rln>1e-08]
         nfit_rln = param_rln.shape[0]
         if n_rln != nfit_rln:
             print (
-                "WARNING: Fits failed (or had zero <Ahe>) for realizations: %d/%d" 
-                %(n_rln - nfit_rln, n_rln)
+                "WARNING: Fits failed (or had zero <Ahe> or inappropriate Tcz)"
+                " for realizations: %d/%d" %(n_rln - nfit_rln, n_rln)
             )
     
         # Print median values and associated negative and positive errorbars of the CZ
@@ -358,6 +397,10 @@ def main():
                 ff.create_dataset('header/taucz', data=taucz)
             if dtaucz is not None:
                 ff.create_dataset('header/dtaucz', data=dtaucz)
+            if taucz_min is not None:
+                ff.create_dataset('header/taucz_min', data=taucz_min)
+            if taucz_max is not None:
+                ff.create_dataset('header/taucz_max', data=taucz_max)
 
             ff.create_dataset('obs/freq', data=freq)
             ff.create_dataset('obs/num_of_n', data=num_of_n)
