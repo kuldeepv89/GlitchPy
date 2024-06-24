@@ -77,7 +77,7 @@ def main():
     
     
         # Start the log file
-        outputdir = os.path.join(path, star + "_" + method+'_Fitting_observed_frequencies(6)')
+        outputdir = os.path.join(path, star + "_" + method)
         if not os.path.isdir(outputdir):
             os.makedirs(outputdir)
         stdout = sys.stdout
