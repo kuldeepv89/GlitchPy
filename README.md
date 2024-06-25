@@ -89,6 +89,11 @@ A set of recommended values is given below:
 - if `taucz = None`, `taucz = 0.34 * acousticRadius + 929`
 - if `dtaucz = None`, `dtaucz = 0.10 * acousticRadius`
 
+`taucz_min (float)` & `taucz_max (float) :` Select realizations based on this range
+- Range : `[taucz_min, taucz_max]`
+- if `taucz_min = None`, `no lower limit`
+- if `taucz_max = None`, `no upper limit`
+
 `vmin (float)` & `vmax (float) :` Frequency range for the average amplitude
 - Range : `[vmin, vmax]`
 - if `vmin = None`, assume `minimum` value of the fitted frequencies
