@@ -56,7 +56,7 @@ def fit_summary(plotdata, outputdir):
             param[i, :], vmin, vmax, delta_nu=delta_nu, method=method
         )
 
-    # Initial guesses for various acoutic depths 
+    # Initial guesses for various acoustic depths 
     acousticRadius = 5.e5 / delta_nu
     if tauhe is None:
         tauhe = 0.17 * acousticRadius + 18.
@@ -66,6 +66,10 @@ def fit_summary(plotdata, outputdir):
         taucz = 0.34 * acousticRadius + 929.
     if dtaucz is None:
         dtaucz = 0.10 * acousticRadius
+    if taucz_min is None:
+        taucz_min = 0.
+    if taucz_max is None:
+        taucz_max = acousticRadius
 
 
     # List of colors

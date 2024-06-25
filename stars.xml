@@ -14,7 +14,7 @@
 	<Numerical_Group>
 		
 		<method value = "FQ"/>
-		<n_rln value = "10000"/>
+		<n_rln value = "1000"/>
 		<npoly_params value = "5"/>
 		<nderiv value = "3"/>
 		<regu_param value = "2"/>
@@ -27,15 +27,13 @@
 		
 		<tauhe value = "None"/>
 		<dtauhe value = "None"/>
-		<taucz value = "3500"/>
-		<dtaucz value = "500"/>
-		<taucz_min value = "3000"/>
-		<taucz_max value = "3250"/>
+		<taucz value = "None"/>
+		<dtaucz value = "None"/>
+		<taucz_min value = "None"/>
+		<taucz_max value = "None"/>
 		<vmin value = "None"/>
 		<vmax value = "None"/>
 	
 	</Physical_Group>
 
 </stars>
-
-		

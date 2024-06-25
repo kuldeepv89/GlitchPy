@@ -107,11 +107,11 @@ def main():
             raise FileNotFoundError("Input frequency file not found %s!" %(freqfile))
         freq, num_of_mode, num_of_n, delta_nu = ug.loadFreq(freqfile, num_of_l)
         if vmin is None:
-            nu_min = 1334.28530945
+            nu_min = np.amin(freq[:, 2])
         else:
             nu_min = vmin
         if vmax is None:
-            nu_max = 2994.83963647
+            nu_max = np.amax(freq[:, 2])
         else:
             nu_max = vmax
         print ("\nThe observed data:")

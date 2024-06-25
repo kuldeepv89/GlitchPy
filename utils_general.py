@@ -320,7 +320,7 @@ def dnu0(frq, numax=None, weight="none"):
     Parameters
     ----------
     frq : array
-        Harmonic degrees, radial orders, frequencies
+        Harmonic degrees, radial orders, frequencies, errorbar
     numax : float
         Frequency of maximum power 
         Used only if weight = "white" (see below)
@@ -479,8 +479,7 @@ def loadFreq(filename, num_of_l):
         num_of_n[i] = len(freq[np.rint(freq[:, 0]) == i, 0])
     
     # Estimate large separation using linear fit to the radial modes
-    coefs = np.polyfit(freq[freq[:, 0]<0.5, 1], freq[freq[:, 0]<0.5, 2], 1)
-    delta_nu = coefs[0]
+    delta_nu = dnu0(freq, numax=None, weight="none")
     
     return (freq, num_of_mode, num_of_n, delta_nu)
 
