@@ -91,10 +91,10 @@ except ModuleNotFoundError:
 
 
 #-----------------------------------------------------------------------------------------
-def fit(freq, num_of_n, delta_nu, num_of_dif2=None, freqDif2=None, icov=None, 
-        method='FQ', n_rln=1000, npoly_params=5, nderiv=3, tol_grad=1e-3, 
-        regu_param=7., n_guess=200, tauhe=None, dtauhe=None, taucz=None, 
-        dtaucz=None, rtype=None):
+def fit(freq, num_of_n, delta_nu, nu_max=None, num_of_dif2=None, freqDif2=None, 
+        icov=None, method='FQ', n_rln=1000, npoly_params=5, nderiv=3, 
+        tol_grad=1e-3, regu_param=7., n_guess=200, tauhe=None, dtauhe=None, 
+        taucz=None, dtaucz=None, rtype=None):
     '''
     Fit glitch signatures 
 
@@ -106,6 +106,8 @@ def fit(freq, num_of_n, delta_nu, num_of_dif2=None, freqDif2=None, icov=None,
         Number of modes for each l
     delta_nu : float
         An estimate of large frequncy separation (muHz)
+    nu_max : float
+        Frequency of maximum power (muHz)
     num_of_dif2 : int
         Number of second differences 
         used only for method='SD'
@@ -217,7 +219,10 @@ def fit(freq, num_of_n, delta_nu, num_of_dif2=None, freqDif2=None, icov=None,
             ratio = np.zeros((n_rln+1, len(tmp)), dtype=float)
             ratio[-1, :] = tmp
             dnu = np.zeros(n_rln+1, dtype=float)
-            dnu[-1] = ug.dnu0(freq, numax=None, weight="none")
+            if nu_max is None:
+                dnu[-1] = ug.dnu0(freq, nu_max=nu_max, weight="none")
+            else:
+                dnu[-1] = ug.dnu0(freq, nu_max=nu_max, weight="white")
         else:
             ratio = None
             dnu = None
@@ -246,7 +251,10 @@ def fit(freq, num_of_n, delta_nu, num_of_dif2=None, freqDif2=None, icov=None,
                 # --> Ratios
                 if rtype is not None:
                     _, _, ratio[i, :] = ug.specific_ratio(freq_rln, rtype=rtype)
-                    dnu[i] = ug.dnu0(freq_rln, numax=None, weight="none")
+                    if nu_max is None:
+                        dnu[i] = ug.dnu0(freq_rln, nu_max=nu_max, weight="none")
+                    else:
+                        dnu[i] = ug.dnu0(freq_rln, nu_max=nu_max, weight="white")
 
     # Fit second differences
     elif method.lower() == 'sd':
@@ -285,7 +293,10 @@ def fit(freq, num_of_n, delta_nu, num_of_dif2=None, freqDif2=None, icov=None,
             ratio = np.zeros((n_rln+1, len(tmp)), dtype=float)
             ratio[-1, :] = tmp
             dnu = np.zeros(n_rln+1, dtype=float)
-            dnu[-1] = ug.dnu0(freq, numax=None, weight="none")
+            if nu_max is None:
+                dnu[-1] = ug.dnu0(freq, nu_max=nu_max, weight="none")
+            else:
+                dnu[-1] = ug.dnu0(freq, nu_max=nu_max, weight="white")
         else:
             ratio = None
             dnu = None
@@ -315,7 +326,10 @@ def fit(freq, num_of_n, delta_nu, num_of_dif2=None, freqDif2=None, icov=None,
                 # --> Ratios
                 if rtype is not None:
                     _, _, ratio[i, :] = ug.specific_ratio(freq_rln, rtype=rtype)
-                    dnu[i] = ug.dnu0(freq_rln, numax=None, weight="none")
+                    if nu_max is None:
+                        dnu[i] = ug.dnu0(freq_rln, nu_max=nu_max, weight="none")
+                    else:
+                        dnu[i] = ug.dnu0(freq_rln, nu_max=nu_max, weight="white")
 
     else:
         raise ValueError ("Unrecognized fitting method %s!" %(method))

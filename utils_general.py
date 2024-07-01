@@ -5,6 +5,135 @@ load data, etc.)
 import sys
 import numpy as np
 import h5py
+import xml.etree.ElementTree as ET
+tree=ET.parse('stars.xml')
+root=tree.getroot()
+
+
+
+#-----------------------------------------------------------------------------------------
+def read_xml():
+    """
+    Read input data
+    """
+#-----------------------------------------------------------------------------------------
+
+    # Frequency group
+    for j in root.iter('path'):
+        path = j.attrib['value']
+
+    stars = []
+    for star in root.iter('star'):
+        stars.append(star.attrib['starid'])
+
+    for j in root.iter('num_of_l'):
+        num_of_l = int(j.attrib['value'])
+
+    for j in root.iter('rtype'):
+        if j.attrib['value'] == 'None':
+            rtype = None
+        else:
+            rtype = j.attrib['value']
+
+    # Numerical parameters group
+    for j in root.iter('method'):
+        method = j.attrib['value']
+
+    for j in root.iter('n_rln'):
+        n_rln = int(j.attrib['value'])
+
+    for j in root.iter('npoly_params'):
+        npoly_params = int(j.attrib['value'])
+
+    for j in root.iter('nderiv'):
+        nderiv = int(j.attrib['value'])
+
+    for j in root.iter('regu_param'):
+        regu_param = float(j.attrib['value'])
+
+    for j in root.iter('tol_grad'):
+        tol_grad = float(j.attrib['value'])
+
+    for j in root.iter('n_guess'):
+        n_guess = int(j.attrib['value'])
+
+    # Physical parameters group
+    delta_nu = []
+    for j in root.iter('delta_nu'):
+        if j.attrib['value'] == 'None':
+            delta_nu.append(None)
+        else:
+            delta_nu.append(float(j.attrib['value']))
+
+    nu_max = []
+    for j in root.iter('nu_max'):
+        if j.attrib['value'] == 'None':
+            nu_max.append(None)
+        else:
+            nu_max.append(float(j.attrib['value']))
+
+    tauhe = []
+    for j in root.iter('tauhe'):
+        if j.attrib['value'] == 'None':
+            tauhe.append(None)
+        else:
+            tauhe.append(float(j.attrib['value']))
+
+    dtauhe = []
+    for j in root.iter('dtauhe'):
+        if j.attrib['value'] == 'None':
+            dtauhe.append(None)
+        else:
+            dtauhe.append(float(j.attrib['value']))
+
+    taucz = []
+    for j in root.iter('taucz'):
+        if j.attrib['value'] == 'None':
+            taucz.append(None)
+        else:
+            taucz.append(float(j.attrib['value']))
+
+    dtaucz = []
+    for j in root.iter('dtaucz'):
+        if j.attrib['value'] == 'None':
+            dtaucz.append(None)
+        else:
+            dtaucz.append(float(j.attrib['value']))
+
+    taucz_min = []
+    for j in root.iter('taucz_min'):
+        if j.attrib['value'] == 'None':
+            taucz_min.append(None)
+        else:
+            taucz_min.append(float(j.attrib['value']))
+
+    taucz_max = []
+    for j in root.iter('taucz_max'):
+        if j.attrib['value'] == 'None':
+            taucz_max.append(None)
+        else:
+            taucz_max.append(float(j.attrib['value']))
+
+    vmin = []
+    for j in root.iter('vmin'):
+        if j.attrib['value'] == 'None':
+            vmin.append(None)
+        else:
+            vmin.append(float(j.attrib['value']))
+
+    vmax = []
+    for j in root.iter('vmax'):
+        if j.attrib['value'] == 'None':
+            vmax.append(None)
+        else:
+            vmax.append(float(j.attrib['value']))
+
+    return (
+            path, stars, num_of_l, rtype, 
+            method, n_rln, npoly_params, nderiv, regu_param, tol_grad, n_guess, 
+            delta_nu, nu_max, tauhe, dtauhe, taucz, dtaucz, taucz_min, taucz_max, 
+            vmin, vmax
+    )
 
 
 
@@ -312,7 +441,7 @@ def specific_ratio(frq, rtype="r012"):
 
     
 #-----------------------------------------------------------------------------------------
-def dnu0(frq, numax=None, weight="none"):
+def dnu0(frq, nu_max=None, weight="none"):
 #-----------------------------------------------------------------------------------------
     """
     Routine to compute the large frequency separation using radial modes
@@ -321,7 +450,7 @@ def dnu0(frq, numax=None, weight="none"):
     ----------
     frq : array
         Harmonic degrees, radial orders, frequencies, errorbar
-    numax : float
+    nu_max : float
         Frequency of maximum power 
         Used only if weight = "white" (see below)
     weight : str
@@ -343,8 +472,8 @@ def dnu0(frq, numax=None, weight="none"):
         FWHM_sigma = 2.0 * np.sqrt(2.0 * np.log(2.0))
         wfitdnu = np.exp(
             -1.0
-            * np.power(yfitdnu - numax, 2)
-            / (2 * np.power(0.25 * numax / FWHM_sigma, 2.0))
+            * np.power(yfitdnu - nu_max, 2)
+            / (2 * np.power(0.25 * nu_max / FWHM_sigma, 2.0))
         )
         fitcoef = np.polyfit(xfitdnu, yfitdnu, 1, w=np.sqrt(wfitdnu))
     elif weight.lower() == "sigma":
@@ -463,8 +592,6 @@ def loadFreq(filename, num_of_l):
         Number of modes
     num_of_n : array of int
         Number of modes for each l
-    delta_nu : float
-        Large frequncy separation (muHz)
     '''
 #-----------------------------------------------------------------------------------------
 
@@ -478,10 +605,7 @@ def loadFreq(filename, num_of_l):
     for i in range (num_of_l):
         num_of_n[i] = len(freq[np.rint(freq[:, 0]) == i, 0])
     
-    # Estimate large separation using linear fit to the radial modes
-    delta_nu = dnu0(freq, numax=None, weight="none")
-    
-    return (freq, num_of_mode, num_of_n, delta_nu)
+    return (freq, num_of_mode, num_of_n)
 
 
 

@@ -1,18 +1,12 @@
 <?xml version = "1.0"?>
 
 <stars>
-
-	<Modes_Group>
-		
+	<frequency>	
 		<path value = "example"/>
-		<stars value = "16cyga"/>
 		<num_of_l value = "4"/>
 		<rtype value = "r012"/>
-	
-	</Modes_Group>
-
-	<Numerical_Group>
-		
+	</frequency>
+	<numerical>	
 		<method value = "FQ"/>
 		<n_rln value = "1000"/>
 		<npoly_params value = "5"/>
@@ -20,20 +14,19 @@
 		<regu_param value = "2"/>
 		<tol_grad value = "0.001"/>
 		<n_guess value = "200"/>
-	
-	</Numerical_Group>
-	
-	<Physical_Group>
-		
-		<tauhe value = "None"/>
-		<dtauhe value = "None"/>
-		<taucz value = "None"/>
-		<dtaucz value = "None"/>
-		<taucz_min value = "None"/>
-		<taucz_max value = "None"/>
-		<vmin value = "None"/>
-		<vmax value = "None"/>
-	
-	</Physical_Group>
-
+	</numerical>
+	<physical>	
+		<star starid = "16CygA">
+			<delta_nu value = "None"/>
+                        <nu_max value = "2188.5"/>
+			<tauhe value = "None"/>
+			<dtauhe value = "None"/>
+			<taucz value = "None"/>
+			<dtaucz value = "None"/>
+			<taucz_min value = "None"/>
+			<taucz_max value = "None"/>
+			<vmin value = "None"/>
+			<vmax value = "None"/>
+		</star>
+	</physical>
 </stars>

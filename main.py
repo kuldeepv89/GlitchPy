@@ -10,71 +10,22 @@ import plots
 import warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
-import xml.etree.ElementTree as ET
-tree=ET.parse('stars.xml')
-root=tree.getroot()
 
 def main():
     """Main"""
 
-    
-    # Modes Group
-    path = root[0][0].attrib['value']
-    stars = [root[0][1].attrib['value']]
-    num_of_l = int(root[0][2].attrib['value'])
-    rtype = root[0][3].attrib['value']
-    
-    # Numerical Group
-    method = root[1][0].attrib['value']
-    n_rln = int(root[1][1].attrib['value'])
-    npoly_params = int(root[1][2].attrib['value'])
-    nderiv = int(root[1][3].attrib['value'])
-    regu_param = float(root[1][4].attrib['value'])
-    tol_grad = float(root[1][5].attrib['value'])
-    n_guess = int(root[1][6].attrib['value'])
 
-    # Physical Group
-    if root[2][0].attrib['value'] == 'None':
-        tauhe = None
-    else:
-        tauhe = float(root[2][0].attrib['value'])
-    if root[2][1].attrib['value'] == 'None':
-        dtauhe = None
-    else:
-        dtauhe = float(root[2][1].attrib['value'])
-    if root[2][2].attrib['value'] == 'None':
-        taucz = None
-    else:
-        taucz = float(root[2][2].attrib['value'])
-    if root[2][3].attrib['value'] == 'None':
-        dtaucz = None
-    else:
-        dtaucz = float(root[2][3].attrib['value'])
-    if root[2][4].attrib['value'] == 'None':
-        taucz_min = None
-    else:
-        taucz_min = float(root[2][4].attrib['value'])
-    if root[2][5].attrib['value'] == 'None':
-        taucz_max = None
-    else:
-        taucz_max = float(root[2][5].attrib['value'])
-    if root[2][6].attrib['value'] == 'None':
-        vmin = None
-    else:
-        vmin = float(root[2][6].attrib['value'])
-    if root[2][7].attrib['value'] == 'None':
-        vmax = None
-    else:
-        vmax = float(root[2][7].attrib['value'])
+    # Read input xml file
+    (
+            path, stars, num_of_l, rtype, 
+            method, n_rln, npoly_params, nderiv, regu_param, tol_grad, n_guess, 
+            delta_nu, nu_max, tauhe, dtauhe, taucz, dtaucz, taucz_min, taucz_max, 
+            vmin, vmax
+    ) = ug.read_xml()
 
-
-    #========================================================================
-    # Code runs automatically from here...
-    #========================================================================
 
     # Loop over stars
-    for star in stars:
-    
+    for s, star in enumerate(stars):
     
         # Start the log file
         outputdir = os.path.join(path, star + "_" + method)
@@ -105,23 +56,28 @@ def main():
         freqfile = os.path.join(path, star + '.txt')
         if not os.path.isfile(freqfile):
             raise FileNotFoundError("Input frequency file not found %s!" %(freqfile))
-        freq, num_of_mode, num_of_n, delta_nu = ug.loadFreq(freqfile, num_of_l)
-        if vmin is None:
-            nu_min = np.amin(freq[:, 2])
-        else:
-            nu_min = vmin
-        if vmax is None:
-            nu_max = np.amax(freq[:, 2])
-        else:
-            nu_max = vmax
+        freq, num_of_mode, num_of_n = ug.loadFreq(freqfile, num_of_l)
+        
+        if delta_nu[s] is None:
+            if nu_max[s] is None:
+                delta_nu[s] = ug.dnu0(freq, nu_max=nu_max[s], weight="none")
+            else:
+                delta_nu[s] = ug.dnu0(freq, nu_max=nu_max[s], weight="white")
+        
+        if vmin[s] is None:
+            vmin[s] = np.amin(freq[:, 2])
+        if vmax[s] is None:
+            vmax[s] = np.amax(freq[:, 2])
+            
         print ("\nThe observed data:")
         print ("    - total number of modes: %d" %(num_of_mode))
         print ("    - number of n for each l:", num_of_n)
         print (
-            "    - frequency range for averaging: (%.2f, %.2f) muHz" %(nu_min, nu_max)
+            "    - frequency range for averaging: (%.2f, %.2f) muHz "%(vmin[s], vmax[s])
         )
-        print ("    - large separation: %.2f muHz" %(delta_nu))
-        print ("    - acoustic radius: %d sec" %(5e5/delta_nu))
+        print ("    - large separation: %.2f muHz" %(delta_nu[s]))
+        print ("    - frequency of maximum power: {0}".format(nu_max[s]))
+        print ("    - acoustic radius: %d sec" %(5e5/delta_nu[s]))
     
         # Compute second differences (if necessary)
         num_of_dif2, freqDif2, icov = None, None, None
@@ -149,8 +105,9 @@ def main():
         # Print miscellaneous information    
         print ("\nMiscellaneous information:")
         print ("    - number of realizations: %d" %(n_rln))
-        print ("    - tauhe, dtauhe: ({0}, {1})".format(tauhe, dtauhe))
-        print ("    - taucz, dtaucz: ({0}, {1})".format(taucz, dtaucz))
+        print ("    - tauhe, dtauhe: ({0}, {1})".format(tauhe[s], dtauhe[s]))
+        print ("    - taucz, dtaucz: ({0}, {1})".format(taucz[s], dtaucz[s]))
+        print ("    - taucz_min, taucz_max: ({0}, {1})".format(taucz_min[s], taucz_max[s]))
         print ("    - ratio type: {0}".format(rtype))
     
     
@@ -159,7 +116,8 @@ def main():
         param, chi2, reg, ier, ratio, dnu = sg.fit(
             freq, 
             num_of_n, 
-            delta_nu, 
+            delta_nu[s],
+            nu_max[s],
             num_of_dif2=num_of_dif2, 
             freqDif2=freqDif2, 
             icov=icov, 
@@ -170,10 +128,10 @@ def main():
             tol_grad=tol_grad, 
             regu_param=regu_param, 
             n_guess=n_guess, 
-            tauhe=tauhe, 
-            dtauhe=dtauhe, 
-            taucz=taucz, 
-            dtaucz=dtaucz,
+            tauhe=tauhe[s], 
+            dtauhe=dtauhe[s], 
+            taucz=taucz[s], 
+            dtaucz=dtaucz[s],
             rtype=rtype
         )
         print ("* Done!")
@@ -194,17 +152,17 @@ def main():
         plotdata = {}
         plotdata["method"] = method
         plotdata["npoly_params"] = npoly_params
-        plotdata["tauhe"] = tauhe
-        plotdata["dtauhe"] = dtauhe
-        plotdata["taucz"] = taucz
-        plotdata["dtaucz"] = dtaucz
-        plotdata["taucz_min"]=taucz_min
-        plotdata["taucz_max"]=taucz_max
+        plotdata["tauhe"] = tauhe[s]
+        plotdata["dtauhe"] = dtauhe[s]
+        plotdata["taucz"] = taucz[s]
+        plotdata["dtaucz"] = dtaucz[s]
+        plotdata["taucz_min"]=taucz_min[s]
+        plotdata["taucz_max"]=taucz_max[s]
         plotdata["freq"] = freq
         plotdata["num_of_n"] = num_of_n
-        plotdata["delta_nu"] = delta_nu
-        plotdata["vmin"] = nu_min
-        plotdata["vmax"] = nu_max
+        plotdata["delta_nu"] = delta_nu[s]
+        plotdata["vmin"] = vmin[s]
+        plotdata["vmax"] = vmax[s]
         plotdata["freqDif2"] = freqDif2
         plotdata["param"] = param
         plots.fit_summary(plotdata, outputdir)
@@ -215,12 +173,12 @@ def main():
         nfit_rln = param_rln.shape[0]
 
         # Apply taucz mask if taucz_min != None and/or taucz_max != None
-        if taucz_min is not None:
-            mask1 = param_rln[:, -6] > taucz_min
+        if taucz_min[s] is not None:
+            mask1 = param_rln[:, -6] > taucz_min[s]
         else:
             mask1 = np.ones(nfit_rln, dtype=bool)
-        if taucz_max is not None:
-            mask2 = param_rln[:, -6] < taucz_max
+        if taucz_max[s] is not None:
+            mask2 = param_rln[:, -6] < taucz_max[s]
         else:
             mask2 = np.ones(nfit_rln, dtype=bool)
         mask = np.logical_and(mask1, mask2)
@@ -241,9 +199,9 @@ def main():
         for j in range(nfit_rln):
             Acz_rln[j], Ahe_rln[j] = sg.averageAmplitudes(
                 param_rln[j, :], 
-                nu_min, 
-                nu_max, 
-                delta_nu=delta_nu, 
+                vmin[s], 
+                vmax[s], 
+                delta_nu=delta_nu[s], 
                 method=method
             )
 
@@ -314,15 +272,16 @@ def main():
             %(Phe["value"], Phe["nerr"], Phe["perr"])
         )
         
-        # Combine ratios and He glitch properties into a single variable
+        # Combine ratios, He glitch properties and large separation into a single variable
         grparams = np.zeros((nfit_rln, 3))
         grparams[:, 0] = Ahe_rln[:]
         grparams[:, 1] = param_rln[:, -3]
         grparams[:, 2] = param_rln[:, -2]
         if rtype is not None:
-            grparams = np.hstack((ratio_rln, grparams))
-            #grparams = np.hstack((dnu_rln.reshape(nfit_rln, 1), grparams))
-    
+            grparams_tmp = np.hstack((dnu_rln.reshape(nfit_rln, 1), ratio_rln))
+            grparams = np.hstack((grparams_tmp, grparams))
+
+
         # Compute the median values
         ngr = grparams.shape[1]
         gr = np.zeros(ngr)
@@ -331,7 +290,8 @@ def main():
             norder, frq, rto = ug.specific_ratio(freq, rtype=rtype)
             for i in range(ngr-3):
                 gr[i] = np.median(grparams[:, i])
-    
+
+
         # Compute the covariance matrix
         j = int(round(nfit_rln / 2))
         covtmp = MinCovDet().fit(grparams[0:j, :]).covariance_
@@ -371,10 +331,18 @@ def main():
                     "    - median The, err: (%.2f, %.2f)" 
                     %(gr[i], np.sqrt(gr_cov[i, i]))
                 )
+            elif rtype is not None and i == 0:
+                print (
+                    "    - dnu, err: (%.2f, %.2f)" 
+                    %(gr[i], np.sqrt(gr_cov[i, i]))
+                )
             else:
                 print (
                     "    - n, freq, median ratio, err: (%d, %.2f, %.5f, %.5f)" 
-                    %(int(round(norder[i])), frq[i], gr[i], np.sqrt(gr_cov[i, i]))
+                    %(
+                        int(round(norder[i-1])), frq[i-1], gr[i-1], 
+                        np.sqrt(gr_cov[i-1, i-1])
+                    )
                 )
 
         # Plot the correlation matrix
@@ -389,24 +357,26 @@ def main():
             ff.create_dataset('header/regu_param', data=regu_param)
             ff.create_dataset('header/tol_grad', data=tol_grad)
             ff.create_dataset('header/n_guess', data=n_guess)
-            if tauhe is not None:
-                ff.create_dataset('header/tauhe', data=tauhe)
-            if dtauhe is not None:
-                ff.create_dataset('header/dtauhe', data=dtauhe)
-            if taucz is not None:
-                ff.create_dataset('header/taucz', data=taucz)
-            if dtaucz is not None:
-                ff.create_dataset('header/dtaucz', data=dtaucz)
-            if taucz_min is not None:
-                ff.create_dataset('header/taucz_min', data=taucz_min)
-            if taucz_max is not None:
-                ff.create_dataset('header/taucz_max', data=taucz_max)
+            if tauhe[s] is not None:
+                ff.create_dataset('header/tauhe', data=tauhe[s])
+            if dtauhe[s] is not None:
+                ff.create_dataset('header/dtauhe', data=dtauhe[s])
+            if taucz[s] is not None:
+                ff.create_dataset('header/taucz', data=taucz[s])
+            if dtaucz[s] is not None:
+                ff.create_dataset('header/dtaucz', data=dtaucz[s])
+            if taucz_min[s] is not None:
+                ff.create_dataset('header/taucz_min', data=taucz_min[s])
+            if taucz_max[s] is not None:
+                ff.create_dataset('header/taucz_max', data=taucz_max[s])
 
             ff.create_dataset('obs/freq', data=freq)
             ff.create_dataset('obs/num_of_n', data=num_of_n)
-            ff.create_dataset('obs/delta_nu', data=delta_nu)
-            ff.create_dataset('obs/vmin', data=nu_min)
-            ff.create_dataset('obs/vmax', data=nu_max)
+            ff.create_dataset('obs/delta_nu', data=delta_nu[s])
+            if nu_max[s] is not None:
+                ff.create_dataset('obs/nu_max', data=nu_max[s])
+            ff.create_dataset('obs/vmin', data=vmin[s])
+            ff.create_dataset('obs/vmax', data=vmax[s])
             if freqDif2 is not None:
                 ff.create_dataset('obs/freqDif2', data=freqDif2)
             if icov is not None:

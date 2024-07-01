@@ -25,7 +25,7 @@ The code requires standard python packages including `numpy` (version 1.21.4 or 
 
 The input parameters in  `main.py`  are accepted through  `stars.xml`  file (brief explanation given below).
 
-### Modes Group 
+### Frequency Group 
 
 `path (str) :` Path to the oscillation frequencies. For each `star` in the `stars` list (see below), an ascii file with the $~~~~~~~~~~~~~~~~~~~~~~~~~$ name `star.txt` must exist in the folder `path` 
 
@@ -79,6 +79,11 @@ A set of recommended values is given below:
 
 ### Physical Group 
 
+`delta_nu (float) :` Large frequency separation
+- if `delta_nu = None`, `delta_nu` will be calculated in the code
+
+`nu_max (float) :` Frequency of maximum power
+
 `tauhe (float)` & `dtauhe (float) :` Initial guess for the range of acoustic depth of HeIZ 
 - Range : `[tauhe - dtauhe, tauhe + dtauhe]`
 - if `tauhe = None`, `tauhe = 0.17 * acousticRadius + 18` 
@@ -98,6 +103,8 @@ A set of recommended values is given below:
 - Range : `[vmin, vmax]`
 - if `vmin = None`, assume `minimum` value of the fitted frequencies
 - if `vmax = None`, assume `maximum` value of the fitted frequencies
+ 
+Note: In case of multiple stars, the physical group of each star is repeated with a unique `starid`, which enables to run rhe code for multiple stars.
 
 ## Running the Code
 
