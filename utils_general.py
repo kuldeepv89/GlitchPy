@@ -34,6 +34,9 @@ def read_xml():
             rtype = None
         else:
             rtype = j.attrib['value']
+    for j in root.iter('include_dnu'):
+        include_dnu = bool(j.attrib['value'])
+
 
     # Numerical parameters group
     for j in root.iter('method'):
@@ -129,7 +132,7 @@ def read_xml():
             vmax.append(float(j.attrib['value']))
 
     return (
-            path, stars, num_of_l, rtype, 
+            path, stars, num_of_l, rtype, include_dnu,
             method, n_rln, npoly_params, nderiv, regu_param, tol_grad, n_guess, 
             delta_nu, nu_max, tauhe, dtauhe, taucz, dtaucz, taucz_min, taucz_max, 
             vmin, vmax

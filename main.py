@@ -17,7 +17,7 @@ def main():
 
     # Read input xml file
     (
-            path, stars, num_of_l, rtype, 
+            path, stars, num_of_l, rtype, include_dnu, 
             method, n_rln, npoly_params, nderiv, regu_param, tol_grad, n_guess, 
             delta_nu, nu_max, tauhe, dtauhe, taucz, dtaucz, taucz_min, taucz_max, 
             vmin, vmax
@@ -109,6 +109,7 @@ def main():
         print ("    - taucz, dtaucz: ({0}, {1})".format(taucz[s], dtaucz[s]))
         print ("    - taucz_min, taucz_max: ({0}, {1})".format(taucz_min[s], taucz_max[s]))
         print ("    - ratio type: {0}".format(rtype))
+        print ("    - whether include large separation: {0}".format(include_dnu))
     
     
         # Fit the glitch signatures
@@ -132,7 +133,8 @@ def main():
             dtauhe=dtauhe[s], 
             taucz=taucz[s], 
             dtaucz=dtaucz[s],
-            rtype=rtype
+            rtype=rtype,
+            include_dnu=include_dnu
         )
         print ("* Done!")
 
@@ -185,11 +187,14 @@ def main():
         param_rln = param_rln[mask, :]
         nfit_rln = param_rln.shape[0]
 
-        # Extract ratios and large frequency separation
+        # Extract ratios, if relevant
         if rtype is not None:
             ratio_rln = ratio[0:n_rln, :]
             ratio_rln = ratio_rln[ier_rln == 0, :]
             ratio_rln = ratio_rln[mask, :]
+
+        # Extract large frequency separation, if relevant
+        if include_dnu:
             dnu_rln = dnu[0:n_rln]
             dnu_rln = dnu_rln[ier_rln == 0]
             dnu_rln = dnu_rln[mask]
@@ -209,6 +214,7 @@ def main():
         param_rln = param_rln[Ahe_rln>1e-08, :]
         if rtype is not None:
             ratio_rln = ratio_rln[Ahe_rln>1e-08, :]
+        if include_dnu: 
             dnu_rln = dnu_rln[Ahe_rln>1e-08]
         Acz_rln = Acz_rln[Ahe_rln>1e-08]
         Ahe_rln = Ahe_rln[Ahe_rln>1e-08]
@@ -278,8 +284,9 @@ def main():
         grparams[:, 1] = param_rln[:, -3]
         grparams[:, 2] = param_rln[:, -2]
         if rtype is not None:
-            grparams_tmp = np.hstack((dnu_rln.reshape(nfit_rln, 1), ratio_rln))
-            grparams = np.hstack((grparams_tmp, grparams))
+            grparams = np.hstack((ratio_rln, grparams))
+        if include_dnu: 
+            grparams = np.hstack((dnu_rln.reshape(nfit_rln, 1), grparams))
 
 
         # Compute the median values
@@ -290,6 +297,9 @@ def main():
             norder, frq, rto = ug.specific_ratio(freq, rtype=rtype)
             for i in range(ngr-3):
                 gr[i] = np.median(grparams[:, i])
+        else:
+            if include_dnu:
+                gr[0] = np.median(grparams[:, 0])
 
 
         # Compute the covariance matrix
@@ -315,35 +325,42 @@ def main():
     
         # Print the observables with uncertainties from covariance matrix
         print ("\nThe observables with uncertainties from covariance matrix:")
-        for i in range(ngr):
-            if i == ngr-3:
-                print (
-                    "    - median Ahe, err: (%.4f, %.4f)" 
-                    %(gr[i], np.sqrt(gr_cov[i, i]))
-                )
-            elif i == ngr-2:
-                print (
-                    "    - median Dhe, err: (%.3f, %.3f)" 
-                    %(gr[i], np.sqrt(gr_cov[i, i]))
-                )
-            elif i == ngr-1:
-                print (
-                    "    - median The, err: (%.2f, %.2f)" 
-                    %(gr[i], np.sqrt(gr_cov[i, i]))
-                )
-            elif rtype is not None and i == 0:
-                print (
-                    "    - dnu, err: (%.2f, %.2f)" 
-                    %(gr[i], np.sqrt(gr_cov[i, i]))
-                )
-            else:
-                print (
-                    "    - n, freq, median ratio, err: (%d, %.2f, %.5f, %.5f)" 
-                    %(
-                        int(round(norder[i-1])), frq[i-1], gr[i-1], 
-                        np.sqrt(gr_cov[i-1, i-1])
+        if include_dnu:
+            print (
+                "    - dnu, err: (%.2f, %.2f)" 
+                %(gr[0], np.sqrt(gr_cov[0, 0]))
+            )
+            if rtype is not None:
+                for i in range(ngr-4):
+                    print (
+                        "    - n, freq, median ratio, err: (%d, %.2f, %.5f, %.5f)" 
+                        %(
+                            int(round(norder[i])), frq[i], gr[i+1], 
+                            np.sqrt(gr_cov[i+1, i+1])
+                        )
                     )
-                )
+        else:
+            if rtype is not None:
+                for i in range(ngr-3):
+                    print (
+                        "    - n, freq, median ratio, err: (%d, %.2f, %.5f, %.5f)" 
+                        %(
+                            int(round(norder[i])), frq[i], gr[i], 
+                            np.sqrt(gr_cov[i, i])
+                        )
+                    )
+        print (
+            "    - median Ahe, err: (%.4f, %.4f)" 
+            %(gr[ngr-3], np.sqrt(gr_cov[ngr-3, ngr-3]))
+        )
+        print (
+            "    - median Dhe, err: (%.3f, %.3f)" 
+            %(gr[ngr-2], np.sqrt(gr_cov[ngr-2, ngr-2]))
+        )
+        print (
+            "    - median The, err: (%.2f, %.2f)" 
+            %(gr[ngr-1], np.sqrt(gr_cov[ngr-1, ngr-1]))
+        )
 
         # Plot the correlation matrix
         plots.correlations(gr_cov, outputdir)
@@ -391,6 +408,7 @@ def main():
                 ff.create_dataset('rto/ratio', data=ratio)
                 ff.create_dataset('rto/norder', data=norder)
                 ff.create_dataset('rto/frq', data=frq)
+            if include_dnu:
                 ff.create_dataset('rto/dnu', data=dnu)
     
             ff.create_dataset('cov/params', data=gr)

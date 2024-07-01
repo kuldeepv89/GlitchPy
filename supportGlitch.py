@@ -94,7 +94,7 @@ except ModuleNotFoundError:
 def fit(freq, num_of_n, delta_nu, nu_max=None, num_of_dif2=None, freqDif2=None, 
         icov=None, method='FQ', n_rln=1000, npoly_params=5, nderiv=3, 
         tol_grad=1e-3, regu_param=7., n_guess=200, tauhe=None, dtauhe=None, 
-        taucz=None, dtaucz=None, rtype=None):
+        taucz=None, dtaucz=None, rtype=None, include_dnu=False):
     '''
     Fit glitch signatures 
 
@@ -154,6 +154,8 @@ def fit(freq, num_of_n, delta_nu, nu_max=None, num_of_dif2=None, freqDif2=None,
     rtype : str, optional
         Ratio type (one of ["r01", "r10", "r02", "r010", "r012", "r102"])
         If None, ignore ratios calculations
+    include_dnu : bool, optional
+        If True, include large frequency separation in gr012 vector (otherwise don't)
 
     Return
     ------
@@ -218,13 +220,16 @@ def fit(freq, num_of_n, delta_nu, nu_max=None, num_of_dif2=None, freqDif2=None,
             _, _, tmp = ug.specific_ratio(freq, rtype=rtype)
             ratio = np.zeros((n_rln+1, len(tmp)), dtype=float)
             ratio[-1, :] = tmp
+        else:
+            ratio = None
+        # --> Large separation
+        if include_dnu:
             dnu = np.zeros(n_rln+1, dtype=float)
             if nu_max is None:
                 dnu[-1] = ug.dnu0(freq, nu_max=nu_max, weight="none")
             else:
                 dnu[-1] = ug.dnu0(freq, nu_max=nu_max, weight="white")
         else:
-            ratio = None
             dnu = None
 
         # Fit realizations
@@ -251,6 +256,8 @@ def fit(freq, num_of_n, delta_nu, nu_max=None, num_of_dif2=None, freqDif2=None,
                 # --> Ratios
                 if rtype is not None:
                     _, _, ratio[i, :] = ug.specific_ratio(freq_rln, rtype=rtype)
+                # --> Large separation
+                if include_dnu:
                     if nu_max is None:
                         dnu[i] = ug.dnu0(freq_rln, nu_max=nu_max, weight="none")
                     else:
@@ -292,13 +299,16 @@ def fit(freq, num_of_n, delta_nu, nu_max=None, num_of_dif2=None, freqDif2=None,
             _, _, tmp = ug.specific_ratio(freq, rtype=rtype)
             ratio = np.zeros((n_rln+1, len(tmp)), dtype=float)
             ratio[-1, :] = tmp
+        else:
+            ratio = None
+        # --> Large separation
+        if include_dnu:
             dnu = np.zeros(n_rln+1, dtype=float)
             if nu_max is None:
                 dnu[-1] = ug.dnu0(freq, nu_max=nu_max, weight="none")
             else:
                 dnu[-1] = ug.dnu0(freq, nu_max=nu_max, weight="white")
         else:
-            ratio = None
             dnu = None
 
         # Fit realizations
@@ -326,6 +336,8 @@ def fit(freq, num_of_n, delta_nu, nu_max=None, num_of_dif2=None, freqDif2=None,
                 # --> Ratios
                 if rtype is not None:
                     _, _, ratio[i, :] = ug.specific_ratio(freq_rln, rtype=rtype)
+                # --> Large separation
+                if include_dnu:
                     if nu_max is None:
                         dnu[i] = ug.dnu0(freq_rln, nu_max=nu_max, weight="none")
                     else:
