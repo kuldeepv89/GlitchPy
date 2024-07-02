@@ -17,10 +17,10 @@ def main():
 
     # Read input xml file
     (
-            path, stars, num_of_l, rtype, include_dnu, 
+            path, num_of_l, rtype, include_dnu, 
             method, n_rln, npoly_params, nderiv, regu_param, tol_grad, n_guess, 
-            delta_nu, nu_max, tauhe, dtauhe, taucz, dtaucz, taucz_min, taucz_max, 
-            vmin, vmax
+            stars, delta_nu, nu_max, tauhe, dtauhe, taucz, dtaucz, 
+            taucz_min, taucz_max, vmin, vmax
     ) = ug.read_xml()
 
 

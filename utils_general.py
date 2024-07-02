@@ -22,10 +22,6 @@ def read_xml():
     for j in root.iter('path'):
         path = j.attrib['value']
 
-    stars = []
-    for star in root.iter('star'):
-        stars.append(star.attrib['starid'])
-
     for j in root.iter('num_of_l'):
         num_of_l = int(j.attrib['value'])
 
@@ -34,9 +30,12 @@ def read_xml():
             rtype = None
         else:
             rtype = j.attrib['value']
-    for j in root.iter('include_dnu'):
-        include_dnu = bool(j.attrib['value'])
 
+    for j in root.iter('include_dnu'):
+        if j.attrib['value'] == 'True':
+            include_dnu = True
+        else:
+            include_dnu = False
 
     # Numerical parameters group
     for j in root.iter('method'):
@@ -61,6 +60,10 @@ def read_xml():
         n_guess = int(j.attrib['value'])
 
     # Physical parameters group
+    stars = []
+    for star in root.iter('star'):
+        stars.append(star.attrib['starid'])
+
     delta_nu = []
     for j in root.iter('delta_nu'):
         if j.attrib['value'] == 'None':
@@ -132,10 +135,10 @@ def read_xml():
             vmax.append(float(j.attrib['value']))
 
     return (
-            path, stars, num_of_l, rtype, include_dnu,
+            path, num_of_l, rtype, include_dnu,
             method, n_rln, npoly_params, nderiv, regu_param, tol_grad, n_guess, 
-            delta_nu, nu_max, tauhe, dtauhe, taucz, dtaucz, taucz_min, taucz_max, 
-            vmin, vmax
+            stars, delta_nu, nu_max, tauhe, dtauhe, taucz, dtaucz, 
+            taucz_min, taucz_max, vmin, vmax
     )
 
 
