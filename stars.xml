@@ -3,18 +3,18 @@
 <stars>
 	<frequency>	
 		<path value = "example"/>
-		<num_of_l value = "4"/>
+		<num_of_l value = "3"/>
 		<rtype value = "r012"/>
 		<include_dnu value = "True"/>
 	</frequency>
 	<numerical>	
 		<method value = "FQ"/>
-		<n_rln value = "1000"/>
 		<npoly_params value = "5"/>
 		<nderiv value = "3"/>
 		<regu_param value = "2"/>
 		<tol_grad value = "0.001"/>
 		<n_guess value = "200"/>
+		<n_rln value = "10000"/>
 	</numerical>
 	<physical>	
 		<star starid = "16CygA">

@@ -97,11 +97,8 @@ Note. While analysing multiple stars, the `star` group is repeated with appropri
 
 ## Running the Code
 
-After setting up the `stars.xml` file suitably, run the following command in the `GlitchPy` directory.
+After setting up the `stars.xml` file suitably, run the following command in the `GlitchPy` directory (runtime about one hour).
   
        python3 main.py
 
 Note. Running the code for the first time will produce some warnings due to the conversion of Fortran codes to Python modules. The warnings may be ignored (they will not show up from second run onward).
-
-
-

@@ -158,8 +158,8 @@ def main():
         plotdata["dtauhe"] = dtauhe[s]
         plotdata["taucz"] = taucz[s]
         plotdata["dtaucz"] = dtaucz[s]
-        plotdata["taucz_min"]=taucz_min[s]
-        plotdata["taucz_max"]=taucz_max[s]
+        plotdata["taucz_min"] = taucz_min[s]
+        plotdata["taucz_max"] = taucz_max[s]
         plotdata["freq"] = freq
         plotdata["num_of_n"] = num_of_n
         plotdata["delta_nu"] = delta_nu[s]
