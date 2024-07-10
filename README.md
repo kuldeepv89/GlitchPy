@@ -47,7 +47,7 @@ In the `stars.xml` file, the input parameters can be set appropriately. The para
 <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; order of the derivative used in the regularization <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; `nderiv = 3 (1)` is tested and works well for `method = FQ (SD)`
 
 `regu_param : float` 
-<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; regularization parameter <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; `regu_param = 7 (1000)` is tested and works well for `method = FQ (SD)` (assuming above values of `npoly_params` and `nderiv`)
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; regularization parameter <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; `regu_param = 2 (200)` is tested and works well for `method = FQ (SD)` (assuming above values of `npoly_params` and `nderiv`)
 
 `tot_grad : float` 
 <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; absolute tolerance on the gradient of the cost function during its minimisation

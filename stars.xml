@@ -19,7 +19,7 @@
 	<physical>	
 		<star starid = "16CygA">
 			<delta_nu value = "None"/>
-                  <nu_max value = "2188.5"/>
+			<nu_max value = "2188.5"/>
 			<tauhe value = "None"/>
 			<dtauhe value = "None"/>
 			<taucz value = "None"/>
