@@ -1,0 +1,33 @@
+<?xml version = "1.0"?>
+
+<stars>
+	<frequency>	
+		<path value = "example"/>
+		<num_of_l value = "3"/>
+		<rtype value = "r012"/>
+		<include_dnu value = "True"/>
+	</frequency>
+	<numerical>	
+		<method value = "FQ"/>
+		<npoly_params value = "5"/>
+		<nderiv value = "3"/>
+		<regu_param value = "2"/>
+		<tol_grad value = "0.001"/>
+		<n_guess value = "200"/>
+		<n_rln value = "10000"/>
+	</numerical>
+	<physical>	
+		<star starid = "16CygA">
+			<delta_nu value = "None"/>
+			<nu_max value = "2188.5"/>
+			<tauhe value = "None"/>
+			<dtauhe value = "None"/>
+			<taucz value = "None"/>
+			<dtaucz value = "None"/>
+			<taucz_min value = "None"/>
+			<taucz_max value = "None"/>
+			<vmin value = "None"/>
+			<vmax value = "None"/>
+		</star>
+	</physical>
+</stars>

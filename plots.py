@@ -34,6 +34,8 @@ def fit_summary(plotdata, outputdir):
     dtauhe = plotdata["dtauhe"] 
     taucz = plotdata["taucz"] 
     dtaucz = plotdata["dtaucz"] 
+    taucz_min = plotdata["taucz_min"]
+    taucz_max = plotdata["taucz_max"]
     freq = plotdata["freq"] 
     num_of_n = plotdata["num_of_n"] 
     delta_nu = plotdata["delta_nu"] 
@@ -54,7 +56,7 @@ def fit_summary(plotdata, outputdir):
             param[i, :], vmin, vmax, delta_nu=delta_nu, method=method
         )
 
-    # Initial guesses for various acoutic depths 
+    # Initial guesses for various acoustic depths 
     acousticRadius = 5.e5 / delta_nu
     if tauhe is None:
         tauhe = 0.17 * acousticRadius + 18.
@@ -64,6 +66,10 @@ def fit_summary(plotdata, outputdir):
         taucz = 0.34 * acousticRadius + 929.
     if dtaucz is None:
         dtaucz = 0.10 * acousticRadius
+    if taucz_min is None:
+        taucz_min = 0.
+    if taucz_max is None:
+        taucz_max = acousticRadius
 
 
     # List of colors
@@ -388,6 +394,8 @@ def fit_summary(plotdata, outputdir):
     ymin, ymax = ax2.get_ylim()
     ax2.plot((taucz - dtaucz, taucz + dtaucz), (ymax, ymax), 'k-', lw=0.5)
     ax2.axvline(x=param[-1, -6], ls="-", color="k", lw=1)
+    ax2.axvline(x=taucz_min, ls="dotted", color="k", lw=1)
+    ax2.axvline(x=taucz_max, ls="dotted", color="k", lw=1)
 
     ax2.set_xlabel(r'$\tau_{\rm CZ}$ ({\rm s})', fontsize=11, labelpad=1)
     ax2.set_ylabel(r'Frequency', fontsize=11, labelpad=1)
@@ -410,8 +418,8 @@ def fit_summary(plotdata, outputdir):
     majLoc = MultipleLocator(ymajor)
     ax2.yaxis.set_major_locator(majLoc)
     ax2.yaxis.set_major_formatter(FormatStrFormatter('%d'))
-    
-    # Phase 
+
+    # Phase
     ax3 = fig.add_subplot(313)
     ax3.set_rasterization_zorder(-1)
     
