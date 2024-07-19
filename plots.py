@@ -6,6 +6,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator, FormatStrFormatter
 import seaborn as sns
+os.environ["XDG_SESSION_TYPE"] = "xcb"
 
 
 
