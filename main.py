@@ -17,7 +17,7 @@ def main():
 
     # Read input xml file
     (
-            path, num_of_l, rtype, include_dnu, 
+            path, num_of_l, rtype, epstype, include_dnu, 
             method, n_rln, npoly_params, nderiv, regu_param, tol_grad, n_guess, 
             stars, delta_nu, nu_max, tauhe, dtauhe, taucz, dtaucz, 
             taucz_min, taucz_max, vmin, vmax
@@ -57,6 +57,10 @@ def main():
         if not os.path.isfile(freqfile):
             raise FileNotFoundError("Input frequency file not found %s!" %(freqfile))
         freq, num_of_mode, num_of_n = ug.loadFreq(freqfile, num_of_l)
+        
+        if nu_max[s] is None:
+            if include_dnu or (epstype is not None):
+                raise ValueError("ERROR: nu_max must be specified!")
         
         if delta_nu[s] is None:
             if nu_max[s] is None:
@@ -108,13 +112,16 @@ def main():
         print ("    - tauhe, dtauhe: ({0}, {1})".format(tauhe[s], dtauhe[s]))
         print ("    - taucz, dtaucz: ({0}, {1})".format(taucz[s], dtaucz[s]))
         print ("    - taucz_min, taucz_max: ({0}, {1})".format(taucz_min[s], taucz_max[s]))
-        print ("    - ratio type: {0}".format(rtype))
+        if rtype is not None:
+            print ("    - ratio type: {0}".format(rtype))
+        if epstype is not None:
+            print ("    - epsilon diff type: {0}".format(epstype))
         print ("    - whether include large separation: {0}".format(include_dnu))
     
     
         # Fit the glitch signatures
         print ("\n* Fitting data... ")
-        param, chi2, reg, ier, ratio, dnu = sg.fit(
+        param, chi2, reg, ier, ratio, eps, dnu = sg.fit(
             freq, 
             num_of_n, 
             delta_nu[s],
@@ -134,8 +141,10 @@ def main():
             taucz=taucz[s], 
             dtaucz=dtaucz[s],
             rtype=rtype,
+            epstype=epstype,
             include_dnu=include_dnu
         )
+
         print ("* Done!")
 
         # Print chi-square of the fit (to the observed data) 
@@ -199,6 +208,12 @@ def main():
             dnu_rln = dnu_rln[ier_rln == 0]
             dnu_rln = dnu_rln[mask]
 
+        # #Extract epsilon differences, if relevant
+        if epstype is not None:
+            eps_rln = eps[0:n_rln, :]
+            eps_rln = eps_rln[ier_rln == 0, :]
+            eps_rln = eps_rln[mask, :]            
+
         # Compute average amplitudes of the He and CZ signatures
         Acz_rln, Ahe_rln = np.zeros(nfit_rln), np.zeros(nfit_rln)
         for j in range(nfit_rln):
@@ -216,6 +231,8 @@ def main():
             ratio_rln = ratio_rln[Ahe_rln>1e-08, :]
         if include_dnu: 
             dnu_rln = dnu_rln[Ahe_rln>1e-08]
+        if epstype is not None:
+            eps_rln = eps_rln[Ahe_rln>1e-08, :]
         Acz_rln = Acz_rln[Ahe_rln>1e-08]
         Ahe_rln = Ahe_rln[Ahe_rln>1e-08]
         nfit_rln = param_rln.shape[0]
@@ -226,7 +243,7 @@ def main():
             )
     
         # Print median values and associated negative and positive errorbars of the CZ
-        #     signature (average amplitude, acoustic depth and phase)
+        # signature (average amplitude, acoustic depth and phase)
         Acz = {"unit": "muHz"}
         Acz["value"], Acz["nerr"], Acz["perr"] = ug.medianAndErrors(Acz_rln)
         print (
@@ -278,17 +295,17 @@ def main():
             %(Phe["value"], Phe["nerr"], Phe["perr"])
         )
         
-        # Combine ratios, He glitch properties and large separation into a single variable
+        # Combine ratios, eps, He glitch properties and large separation into a single variable
         grparams = np.zeros((nfit_rln, 3))
         grparams[:, 0] = Ahe_rln[:]
         grparams[:, 1] = param_rln[:, -3]
         grparams[:, 2] = param_rln[:, -2]
         if rtype is not None:
             grparams = np.hstack((ratio_rln, grparams))
+        if epstype is not None:
+            grparams = np.hstack((eps_rln, grparams))
         if include_dnu: 
             grparams = np.hstack((dnu_rln.reshape(nfit_rln, 1), grparams))
-
-
         # Compute the median values
         ngr = grparams.shape[1]
         gr = np.zeros(ngr)
@@ -297,16 +314,22 @@ def main():
             norder, frq, rto = ug.specific_ratio(freq, rtype=rtype)
             for i in range(ngr-3):
                 gr[i] = np.median(grparams[:, i])
+        # else:
+        #     if include_dnu:
+        #         gr[0] = np.median(grparams[:, 0])
+        if epstype is not None:
+            norder, lorder, frq, ep = ug.specific_eps(freq, np.median(grparams[:, 0]), epstype=epstype)
+            for i in range(ngr-3):
+                gr[i] = np.median(grparams[:, i])
         else:
             if include_dnu:
                 gr[0] = np.median(grparams[:, 0])
-
-
+                
         # Compute the covariance matrix
         j = int(round(nfit_rln / 2))
         covtmp = MinCovDet().fit(grparams[0:j, :]).covariance_
         gr_cov = MinCovDet().fit(grparams).covariance_
-    
+
         # Test convergence (change in standard deviations below a relative 
         #    tolerance)
         rdif = np.amax(
@@ -317,12 +340,13 @@ def main():
                 )
             )
         )
+        
+        
         if rdif > 0.1:
             print (
                 "WARNING: Maximum relative difference %.2e > 0.1! " 
                 "Check the covariance..." %(rdif)
             )
-    
         # Print the observables with uncertainties from covariance matrix
         print ("\nThe observables with uncertainties from covariance matrix:")
         if include_dnu:
@@ -339,6 +363,15 @@ def main():
                             np.sqrt(gr_cov[i+1, i+1])
                         )
                     )
+            if epstype is not None:
+                for i in range(ngr-4):
+                    print (
+                        "    - n, l, freq, median epsilon, err: (%d, %d, %.2f, %.5f, %.5f)" 
+                        %(
+                            norder[i], lorder[i], frq[i], gr[i+1], 
+                            np.sqrt(gr_cov[i+1, i+1])
+                        )
+                    )
         else:
             if rtype is not None:
                 for i in range(ngr-3):
@@ -346,6 +379,15 @@ def main():
                         "    - n, freq, median ratio, err: (%d, %.2f, %.5f, %.5f)" 
                         %(
                             int(round(norder[i])), frq[i], gr[i], 
+                            np.sqrt(gr_cov[i, i])
+                        )
+                    )
+            if epstype is not None:
+                for i in range(ngr-3):
+                    print (
+                        "    - n, l, freq, median epsilon, err: (%d, %d, %.2f, %.5f, %.5f)" 
+                        %(
+                            norder[i], lorder[i], frq[i], gr[i], 
                             np.sqrt(gr_cov[i, i])
                         )
                     )
@@ -410,7 +452,13 @@ def main():
                 ff.create_dataset('rto/frq', data=frq)
             if include_dnu:
                 ff.create_dataset('rto/dnu', data=dnu)
-    
+            if epstype is not None:
+                ff.create_dataset('eps/epstype', data=epstype)
+                ff.create_dataset('eps/eps', data=eps)
+                ff.create_dataset('eps/norder', data=norder)
+                ff.create_dataset('eps/lorder', data=lorder)
+                ff.create_dataset('eps/frq', data=frq)    
+        
             ff.create_dataset('cov/params', data=gr)
             ff.create_dataset('cov/cov', data=gr_cov)
 

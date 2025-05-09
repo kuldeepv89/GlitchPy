@@ -5,6 +5,7 @@ load data, etc.)
 import sys
 import numpy as np
 import h5py
+from scipy.interpolate import CubicSpline
 import xml.etree.ElementTree as ET
 tree=ET.parse('stars.xml')
 root=tree.getroot()
@@ -25,12 +26,20 @@ def read_xml():
     for j in root.iter('num_of_l'):
         num_of_l = int(j.attrib['value'])
 
-    for j in root.iter('rtype'):
+    for j in root.iter('type'):
         if j.attrib['value'] == 'None':
             rtype = None
-        else:
+            epstype = None
+        if j.attrib['value'] in ['e01', 'e02', 'e012']:
+            epstype = j.attrib['value']
+            rtype = None
+        elif j.attrib['value'] in ['r010', 'r02', 'r01', 'r10', 'r012', 'r102']:
             rtype = j.attrib['value']
+            epstype = None
 
+        else:
+            raise ValueError("ERROR: Invalid ratio/epsilon type!")
+            
     for j in root.iter('include_dnu'):
         if j.attrib['value'] == 'True':
             include_dnu = True
@@ -135,7 +144,7 @@ def read_xml():
             vmax.append(float(j.attrib['value']))
 
     return (
-            path, num_of_l, rtype, include_dnu,
+            path, num_of_l, rtype, epstype, include_dnu,
             method, n_rln, npoly_params, nderiv, regu_param, tol_grad, n_guess, 
             stars, delta_nu, nu_max, tauhe, dtauhe, taucz, dtaucz, 
             taucz_min, taucz_max, vmin, vmax
@@ -302,6 +311,200 @@ def ratios(frq):
     return r02, r01, r10
 
 
+#-----------------------------------------------------------------------------------------
+def compute_epsilondiff(
+    osckey,
+    osc,
+    avgdnu,
+    sequence="e012",
+    nsorting=True,
+    extrapolation=False,
+    nrealisations=20000,
+    debug=False,
+):
+    """
+    Compute epsilon differences and covariances.
+
+    From Roxburgh 2016:
+    * Eq. 1: Epsilon(n,l)
+    * Eq. 4: EpsilonDifference(l=0,l=(1,2))
+
+    Epsilon differences are independent of surface phase shift/outer
+    layers when the epsilons are evaluated at the same frequency. It
+    therefore relies on splining from epsilons at the observed frequencies
+    of the given degree and order to the frequency of the compared/subtracted
+    epsilon. See function "compute_epsilondiffseqs" for further clarification.
+
+    For MonteCarlo sampling of the covariances, it is replicated from the
+    covariance determination of frequency ratios in BASTA, (sec 4.1.3 of
+    Aguirre Børsen-Koch et al. 2022). A number of realisations of the
+    epsilon differences are drawn from random Gaussian distributions of the
+    individual frequencies within their uncertainty.
+
+    Parameters
+    ----------
+    osckey : array
+        Array containing the angular degrees and radial orders of the modes.
+    osc : array
+        Array containing the modes (and inertias).
+    avgdnu : float
+        Average value of the large frequency separation.
+    sequence : str, optional
+        Similar to ratios, what sequence of epsilon differences to be computed.
+        Can be e01, e02 or e012 for a combination of the two first.
+    nsorting : bool, optional
+        If True (default), the sequences are sorted by n-value of the frequencies. If
+        False, the entire 01 sequence is followed by the 02 sequence.
+    extrapolation : bool, optional
+        If False (default), modes outside the range of the l=0 modes are discarded to
+        avoid extrapolation.
+    nrealisations : int or bool, optional
+        If int: number of realisations used for MC-sampling the covariances
+        If bool: Whether to use MC (True) or analytic (False) deternubation
+        of covariances. If True, nrealisations of 20,000 is used.
+    debug : bool, optional
+        Print additional output and make plots for debugging (incl. a plot of the
+        correlation matrix).
+
+    Returns
+    -------
+    epsdiff : array
+        Array containing the modes in the observed data.
+    epsdiff_cov : array
+        Covariances matrix.
+    """
+#-----------------------------------------------------------------------------------------
+    # Remove modes outside of l=0 range
+    if not extrapolation:
+        indall = osckey[0, :] > -1
+        ind0 = osckey[0, :] == 0
+        ind12 = osckey[0, :] > 0
+        # print(osc[0, ind12], max(osc[0, ind0]))
+        mask = np.logical_and(
+            osc[0, ind12] < max(osc[0, ind0]), osc[0, ind12] > min(osc[0, ind0])
+        )
+        indall[ind12] = mask
+        if debug and any(mask):
+            print(
+                "The following modes have been skipped from epsilon differences to avoid extrapolation:"
+            )
+            for f, (l, n) in zip(osc[0, ~indall], osckey[:, ~indall].T):
+                print(" - (l,n,f) = ({0}, {1:02d}, {2:.3f})".format(l, n, f))
+        # print(osc[1])
+        # print(osckey[1])
+        osc = osc[:, indall]
+        osckey = osckey[:, indall]
+        # print(osc[1])
+        # print(osckey[1])
+    epsdiff = compute_epsilondiffseqs(
+        osckey, osc, avgdnu, sequence=sequence, nsorting=nsorting
+    )
+
+    return epsdiff 
+
+
+
+
+#-----------------------------------------------------------------------------------------
+def compute_epsilondiffseqs(
+    osckey,
+    osc,
+    avgdnu,
+    sequence,
+    nsorting=True,
+):
+    """
+    Computed epsilon differences, based on Roxburgh 2016 (eq. 1 and 4)
+
+    Epsilons E of frequency v with order n and degree l is determined as:
+    E(n,l) = E(v(n,l)) = v(n,l)/dnu - n - l/2
+
+    From this, an epsilon is determined for each original frequncy. These
+    are not independent on the surface layers, but their differences
+    between different degrees are, if evaluated at the same frequency.
+    Therefore, the epsilon differences dE of e.g. E(n,l=0) and E(n,l=2),
+    dE(02) is determined from interpolating/splining the l=0 epsilon sequence
+    SE0 and evaluating it at v(n,l=2), and subtracting the corresponding
+    E(n,l=2). Therefore, the epsilon difference can be summarised as
+    dE(0l) = SE0(v(n,l)) - E(n,l)
+
+    Parameters
+    ----------
+    osckey : array
+        Array containing the angular degrees and radial orders of the modes
+    osc : array
+        Array containing the modes (and inertias)
+    avgdnu : float
+        Average large frequency separation
+    sequence : str
+        Similar to ratios, what sequence of epsilon differences to be computed.
+        Can be 01, 02 or 012 for a combination of the two first.
+    nsorting : bool
+        If True (default), the sequences are sorted by n-value of the frequencies.
+        If False, the entire 01 sequence is followed by the 02 sequence.
+
+    Returns
+    -------
+    deps : array
+        Array containing epsilon differences. First index correpsonds to:
+        0 - Epsilon differences
+        1 - Indentifying frequencies
+        2 - Identifying degree l
+        3 - Radial degree n of identifying l={1,2} mode
+    """
+#-----------------------------------------------------------------------------------------
+
+    # Select the sequence(s) to use
+    if sequence == "e012":
+        l_used = [1, 2]
+    elif sequence == "e02":
+        l_used = [2]
+    elif sequence == "e01":
+        l_used = [1]
+    else:
+        raise KeyError("Undefined epsilon difference sequence requested!")
+
+    # Epsilon is computed analytically from the frequency information
+    epsilon = np.zeros(osc.shape[1])
+
+    for i, freq in enumerate(osc[0, :]):
+        ll, nn = osckey[:, i]
+        epsilon[i] = freq / avgdnu - nn - ll / 2
+    # Setup base l=0 interpolater object
+    nu0 = osc[0, osckey[0, :] == 0]
+    eps0 = epsilon[osckey[0, :] == 0]
+    eps0_intpol = CubicSpline(nu0, eps0)
+    # Compute the epsilon differences of the selected sequence(s)
+    nmodes = sum([sum(osckey[0] == ll) for ll in l_used])
+    # print(nmodes) 
+    deps = np.zeros((4, nmodes))
+    Niter = 0
+    for ll in l_used:
+        # Extract freq and epsilon for l=ll modes
+        nul = osc[0, osckey[0] == ll]
+        epsl = epsilon[osckey[0] == ll]
+
+        # Evaluate epsilon(l=0) at nu(l=ll)
+        eps0_at_nul = eps0_intpol(nul)
+
+        # Difference
+        diff_eps0l = eps0_at_nul - epsl
+
+        # Store 0: difference, 1: freq, 2: l, 3: n
+        deps[0, Niter : Niter + len(diff_eps0l)] = diff_eps0l
+        deps[1, Niter : Niter + len(diff_eps0l)] = nul
+        deps[2, Niter : Niter + len(diff_eps0l)] = ll
+        deps[3, Niter : Niter + len(diff_eps0l)] = osckey[1][osckey[0] == ll]
+
+        Niter += len(diff_eps0l)
+    # print(nul)
+    # Sort according to n if flagged (ensure l=1 before l=2 with 0.1)
+    if nsorting:
+        mask = np.argsort(deps[3, :] + deps[2, :] * 0.1)
+        deps = deps[:, mask]
+    # print(deps)
+    return deps
+
 
 #-----------------------------------------------------------------------------------------
 def combined_ratios(r02, r01, r10):
@@ -441,11 +644,68 @@ def specific_ratio(frq, rtype="r012"):
             ratio = r102[:, 1]
         else:
             norder, frequency, ratio = (None, None, None)
-    
     return (norder, frequency, ratio)
 
 
+#-----------------------------------------------------------------------------------------
+def specific_eps(frq, dnu, epstype="e012"):
+    """
+    Routine to compute specific type of epsilon differences from oscillation
+    frequencies
+
+    Parameters
+    ----------
+    frq : array
+        Harmonic degrees, radial orders, frequencies
+    dnu : float
+        Average large frequency separation
+    epstype : str 
+        epsilon diff type (one of ["e01", "e02", "e012"])
+
+    Returns
+    -------
+    norder : array
+        Radial order values
+    loder : array
+        Spherical order values (eg. '1' for 'e01')
+    frequency : array
+        Frequency values (in muHz)
+    ratio : array
+        Ratio values
+    """
+#-----------------------------------------------------------------------------------------
     
+    if epstype not in ["e02", "e01", "e012"]:
+        raise ValueError("ERROR: Unrecognized epsilon-type %s!" %(epstype))
+    # Read frequencies from file
+    frecu = frq[:,2]
+    errors = frq[:,3]
+    norder = frq[:,1]
+    ldegree = frq[:,0]
+    # Build osc and osckey in a sorted manner
+    f = np.asarray([])
+    n = np.asarray([])
+    e = np.asarray([])
+    l = np.asarray([])
+    for li in [0, 1, 2]:
+        given_l = ldegree == li
+        incrn = np.argsort(norder[given_l], kind="mergesort")
+        l = np.concatenate([l, ldegree[given_l][incrn]])
+        n = np.concatenate([n, norder[given_l][incrn]])
+        f = np.concatenate([f, frecu[given_l][incrn]])
+        e = np.concatenate([e, errors[given_l][incrn]])
+    assert len(f) == len(n) == len(e) == len(l)
+    osckey = np.asarray([l, n], dtype=int)
+    osc = np.array([f, e])
+    epsdiff = compute_epsilondiff(osckey, osc, dnu, sequence = epstype)
+    eps = epsdiff[0]
+    frequency = epsdiff[1]
+    lorder = epsdiff[2]
+    norder = epsdiff[3]
+
+    return (norder, lorder, frequency, eps)
+
+
 #-----------------------------------------------------------------------------------------
 def dnu0(frq, nu_max=None, weight="none"):
 #-----------------------------------------------------------------------------------------
@@ -493,7 +753,6 @@ def dnu0(frq, nu_max=None, weight="none"):
     dnu = fitcoef[0]
 
     return dnu
-
 
 
 #-----------------------------------------------------------------------------------------
