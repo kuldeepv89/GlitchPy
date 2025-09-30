@@ -29,8 +29,8 @@ In the `stars.xml` file, the input parameters can be set appropriately. The para
 `num_of_l : int` 
 <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; number of harmonic degrees starting from `l = 0` to use in calculations 
 
-`rtype : str` 
-<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; type of frequency ratios (choose from `r01`, `r10`, `r02`, `r010`, `r012`, `r102`) <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if `rtype = None`, ratios are not calculated
+`type : str` 
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; type of frequency ratios / epsilon differences (choose from `r01`, `r10`, `r02`, `r010`, `r012`, `r102`, `e01`, `e02`, `e012`) <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if `type = None`, ratios and epsilon differences are not calculated.
 
 `include_dnu : bool`
 <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if `include_dnu = True`, calculate large frequency separation (otherwise don't)
@@ -67,7 +67,7 @@ In the `stars.xml` file, the input parameters can be set appropriately. The para
 <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; large frequency separation (muHz) <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if `delta_nu = None`, it is internally calculated using radial modes 
 
 `nu_max : float` 
-<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; frequency of maximum power (muHz) to be used in `delta_nu` calculation (when not given) <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if `nu_max = None`, calculate `delta_nu` without applying any weight in the least-squares fit 
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; frequency of maximum power (muHz) to be used in `delta_nu` calculation (when not given) <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if `nu_max = None`, calculate `delta_nu` without applying any weight in the least-squares fit <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if `nu_max != None`, calculate `delta_nu` with the weight of White et al. (2011) in the least-squares fit
 
 `tauhe : float`
 <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; initial guess for the acoustic depth of the He glitch (s) <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if `tauhe = None`, `tauhe = 0.17 * acousticRadius + 18` (`acousticRadius = 1 / 2 * delta_nu)`

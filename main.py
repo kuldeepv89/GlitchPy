@@ -143,8 +143,8 @@ def main():
             rtype=rtype,
             epstype=epstype,
             include_dnu=include_dnu
-        )
-
+        ) 
+     
         print ("* Done!")
 
         # Print chi-square of the fit (to the observed data) 
@@ -208,7 +208,7 @@ def main():
             dnu_rln = dnu_rln[ier_rln == 0]
             dnu_rln = dnu_rln[mask]
 
-        # #Extract epsilon differences, if relevant
+        # Extract epsilon differences, if relevant
         if epstype is not None:
             eps_rln = eps[0:n_rln, :]
             eps_rln = eps_rln[ier_rln == 0, :]
@@ -303,9 +303,10 @@ def main():
         if rtype is not None:
             grparams = np.hstack((ratio_rln, grparams))
         if epstype is not None:
-            grparams = np.hstack((eps_rln, grparams))
+            grparams = np.hstack((eps_rln, grparams)) 
         if include_dnu: 
             grparams = np.hstack((dnu_rln.reshape(nfit_rln, 1), grparams))
+       
         # Compute the median values
         ngr = grparams.shape[1]
         gr = np.zeros(ngr)
@@ -313,18 +314,19 @@ def main():
         if rtype is not None:
             norder, frq, rto = ug.specific_ratio(freq, rtype=rtype)
             for i in range(ngr-3):
-                gr[i] = np.median(grparams[:, i])
-        # else:
-        #     if include_dnu:
-        #         gr[0] = np.median(grparams[:, 0])
+                gr[i] = np.median(grparams[:, i])   
         if epstype is not None:
-            norder, lorder, frq, ep = ug.specific_eps(freq, np.median(grparams[:, 0]), epstype=epstype)
+            norder, ldegree, frq, ep = ug.specific_eps(
+                freq,
+                ug.dnu0(freq, nu_max=nu_max[s], weight="white"),
+                epstype=epstype
+            )
             for i in range(ngr-3):
                 gr[i] = np.median(grparams[:, i])
         else:
             if include_dnu:
                 gr[0] = np.median(grparams[:, 0])
-                
+             
         # Compute the covariance matrix
         j = int(round(nfit_rln / 2))
         covtmp = MinCovDet().fit(grparams[0:j, :]).covariance_
@@ -368,7 +370,7 @@ def main():
                     print (
                         "    - n, l, freq, median epsilon, err: (%d, %d, %.2f, %.5f, %.5f)" 
                         %(
-                            norder[i], lorder[i], frq[i], gr[i+1], 
+                            norder[i], ldegree[i], frq[i], gr[i+1], 
                             np.sqrt(gr_cov[i+1, i+1])
                         )
                     )
@@ -387,7 +389,7 @@ def main():
                     print (
                         "    - n, l, freq, median epsilon, err: (%d, %d, %.2f, %.5f, %.5f)" 
                         %(
-                            norder[i], lorder[i], frq[i], gr[i], 
+                            norder[i], ldegree[i], frq[i], gr[i], 
                             np.sqrt(gr_cov[i, i])
                         )
                     )
@@ -456,7 +458,7 @@ def main():
                 ff.create_dataset('eps/epstype', data=epstype)
                 ff.create_dataset('eps/eps', data=eps)
                 ff.create_dataset('eps/norder', data=norder)
-                ff.create_dataset('eps/lorder', data=lorder)
+                ff.create_dataset('eps/ldegree', data=ldegree)
                 ff.create_dataset('eps/frq', data=frq)    
         
             ff.create_dataset('cov/params', data=gr)

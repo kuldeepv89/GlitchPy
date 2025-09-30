@@ -378,8 +378,7 @@ def compute_epsilondiff(
     if not extrapolation:
         indall = osckey[0, :] > -1
         ind0 = osckey[0, :] == 0
-        ind12 = osckey[0, :] > 0
-        # print(osc[0, ind12], max(osc[0, ind0]))
+        ind12 = osckey[0, :] > 0 
         mask = np.logical_and(
             osc[0, ind12] < max(osc[0, ind0]), osc[0, ind12] > min(osc[0, ind0])
         )
@@ -389,13 +388,9 @@ def compute_epsilondiff(
                 "The following modes have been skipped from epsilon differences to avoid extrapolation:"
             )
             for f, (l, n) in zip(osc[0, ~indall], osckey[:, ~indall].T):
-                print(" - (l,n,f) = ({0}, {1:02d}, {2:.3f})".format(l, n, f))
-        # print(osc[1])
-        # print(osckey[1])
+                print(" - (l,n,f) = ({0}, {1:02d}, {2:.3f})".format(l, n, f)) 
         osc = osc[:, indall]
         osckey = osckey[:, indall]
-        # print(osc[1])
-        # print(osckey[1])
     epsdiff = compute_epsilondiffseqs(
         osckey, osc, avgdnu, sequence=sequence, nsorting=nsorting
     )
@@ -476,7 +471,6 @@ def compute_epsilondiffseqs(
     eps0_intpol = CubicSpline(nu0, eps0)
     # Compute the epsilon differences of the selected sequence(s)
     nmodes = sum([sum(osckey[0] == ll) for ll in l_used])
-    # print(nmodes) 
     deps = np.zeros((4, nmodes))
     Niter = 0
     for ll in l_used:
@@ -497,12 +491,12 @@ def compute_epsilondiffseqs(
         deps[3, Niter : Niter + len(diff_eps0l)] = osckey[1][osckey[0] == ll]
 
         Niter += len(diff_eps0l)
-    # print(nul)
+
     # Sort according to n if flagged (ensure l=1 before l=2 with 0.1)
     if nsorting:
         mask = np.argsort(deps[3, :] + deps[2, :] * 0.1)
         deps = deps[:, mask]
-    # print(deps)
+  
     return deps
 
 

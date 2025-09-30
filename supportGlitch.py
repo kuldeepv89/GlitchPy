@@ -220,6 +220,7 @@ def fit(freq, num_of_n, delta_nu, nu_max=None, num_of_dif2=None, freqDif2=None,
         ) 
         param = np.zeros((n_rln+1, len(tmp)), dtype=float)
         param[-1, :] = tmp
+        
         # --> Ratios
         if rtype is not None:
             _, _, tmp = ug.specific_ratio(freq, rtype=rtype)
@@ -227,28 +228,60 @@ def fit(freq, num_of_n, delta_nu, nu_max=None, num_of_dif2=None, freqDif2=None,
             ratio[-1, :] = tmp
         else:
             ratio = None
+        
         # --> Large separation
         if include_dnu:
             dnu = np.zeros(n_rln+1, dtype=float)
             dnu[-1] = ug.dnu0(freq, nu_max=nu_max, weight="white")
         else:
             dnu = None
+        
         # --> Epsilon differences
-        if epstype is not None:
-            delta_nu = np.zeros(n_rln+1, dtype=float)
-            _, _, _, tmp = ug.specific_eps(freq, ug.dnu0(freq, nu_max=nu_max, weight="white"), epstype=epstype)   
+        if epstype is not None: 
+            _, _, _, tmp = ug.specific_eps(
+                freq, 
+                ug.dnu0(freq, nu_max=nu_max, weight="white"), 
+                epstype=epstype
+            )   
             epsilon = np.zeros((n_rln+1, len(tmp)), dtype=float)
             epsilon[-1, :] = tmp
-            # print(tmp)
         else:
             epsilon = None
+        
         # Fit realizations
         if n_rln > 0:
             freq_rln = deepcopy(freq)
             for i in range(n_rln):
-                # freq_rln[:,2] = np.random.normal(loc=freq[:,2], scale = 0.01)
-                # --> Glitches
                 freq_rln[:, 2] = np.random.normal(loc=freq[:, 2], scale=freq[:, 3])
+            
+                #Epsilon differences
+                if epstype is not None:
+                      _, _, _, tmp = ug.specific_eps(
+                      freq_rln,
+                      ug.dnu0(freq_rln, nu_max=nu_max, weight="white"),
+                      epstype=epstype
+                      )
+                      for j in range(n_rln):
+                          if tmp.shape == epsilon[-1,:].shape:
+                              epsilon[i,:] = tmp
+                              break
+                          else:
+                              freq_rln[:, 2] = np.random.normal(loc=freq[:, 2], scale=freq[:, 3])
+                              _, _, _, tmp = ug.specific_eps(
+                                 freq_rln,
+                                 ug.dnu0(freq_rln, nu_max=nu_max, weight="white"),
+                                 epstype=epstype
+                              )
+                
+                # --> Ratios
+                if rtype is not None:
+                    _, _, ratio[i, :] = ug.specific_ratio(freq_rln, rtype=rtype)
+
+                # --> Large separation
+                if include_dnu:
+                    dnu[i] = ug.dnu0(freq_rln, nu_max=nu_max, weight="white")
+                
+                # --> Glitches 
                 param[i, :], chi2[i], reg[i], ier[i] = fit_fq(
                     freq_rln, 
                     num_of_n, 
@@ -264,27 +297,6 @@ def fit(freq, num_of_n, delta_nu, nu_max=None, num_of_dif2=None, freqDif2=None,
                     regu_param_fq=regu_param, 
                     num_guess=n_guess
                 )
-                # --> Ratios
-                if rtype is not None:
-                    _, _, ratio[i, :] = ug.specific_ratio(freq_rln, rtype=rtype)
-                # --> Large separation
-                if include_dnu:
-                    dnu[i] = ug.dnu0(freq_rln, nu_max=nu_max, weight="white")
-                # --> Epsilon differences
-                if epstype is not None:
-                    delta_nu[i] = ug.dnu0(freq_rln, nu_max=nu_max, weight="white")
-                    # print(i)
-                    # if i == 5710: print(freq_rln[:,2]) 
-                    # if len(ug.specific_eps(freq_rln, delta_nu[i], epstype=epstype)[3]) != len(epsilon[i, :]):
-                    #     epsilon[i, :] = np.zeros(len(epsilon[i,:]), dtype=float)
-                        # print(epsilon[i,:])
-                    #     print(delta_nu[i])
-                        # print(freq_rln[:,2])
-                    #     print(epstype)
-                        # print(i)
-                        # print(ug.specific_eps(freq_rln, delta_nu[i], epstype=epstype))
-                    # else:
-                    _, _, _, epsilon[i, :] = ug.specific_eps(freq_rln, delta_nu[i], epstype=epstype)
 
 
     # Fit second differences
@@ -318,6 +330,7 @@ def fit(freq, num_of_n, delta_nu, nu_max=None, num_of_dif2=None, freqDif2=None,
         ) 
         param = np.zeros((n_rln+1, len(tmp)), dtype=float)
         param[-1, :] = tmp
+        
         # --> Ratios
         if rtype is not None:
             _, _, tmp = ug.specific_ratio(freq, rtype=rtype)
@@ -325,53 +338,77 @@ def fit(freq, num_of_n, delta_nu, nu_max=None, num_of_dif2=None, freqDif2=None,
             ratio[-1, :] = tmp
         else:
             ratio = None
+        
         # --> Large separation
         if include_dnu:
             dnu = np.zeros(n_rln+1, dtype=float)
             dnu[-1] = ug.dnu0(freq, nu_max=nu_max, weight="white")
         else:
             dnu = None
+        
         # --> Epsilon differences
         if epstype is not None:
-            delta_nu = np.zeros(n_rln+1, dtype=float)
-            _, _, _, tmp = ug.specific_eps(freq, ug.dnu0(freq, nu_max=nu_max, weight="white"), epstype=epstype)   
+            _, _, _, tmp = ug.specific_eps(
+                 freq, 
+                 ug.dnu0(freq, nu_max=nu_max, weight="white"), 
+                 epstype=epstype
+            )
             epsilon = np.zeros((n_rln+1, len(tmp)), dtype=float)
             epsilon[-1, :] = tmp
         else:
             epsilon = None
+        
         # Fit realizations
         if n_rln > 0:
             freq_rln = deepcopy(freq)
             for i in range(n_rln):
                 freq_rln[:, 2] = np.random.normal(loc=freq[:, 2], scale=freq[:, 3])
-                # --> Glitches
-                dif2_rln = sd(freq_rln, num_of_n, num_of_dif2)            
-                param[i, :], chi2[i], reg[i], ier[i] = fit_sd(
-                    dif2_rln, 
-                    icov, 
-                    acousticRadius, 
-                    tauhe, 
-                    dtauhe, 
-                    taucz, 
-                    dtaucz, 
-                    npoly_sd=npoly_params,
-                    total_num_of_param_sd=nparams,
-                    nderiv_sd=nderiv,
-                    tol_grad_sd=tol_grad,
-                    regu_param_sd=regu_param, 
-                    num_guess=n_guess
-                ) 
+                
+                #Epsilon differences
+                if epstype is not None:
+                    _, _, _, tmp = ug.specific_eps(
+                    freq_rln,
+                    ug.dnu0(freq_rln, nu_max=nu_max, weight="white"),
+                    epstype=epstype
+                    )
+                    for j in range(n_rln):
+                        if tmp.shape == epsilon[-1,:].shape:
+                            epsilon[i,:] = tmp
+                            break
+                        else:
+                            freq_rln[:, 2] = np.random.normal(loc=freq[:, 2], scale=freq[:, 3])
+                            _, _, _, tmp = ug.specific_eps(
+                               freq_rln,
+                               ug.dnu0(freq_rln, nu_max=nu_max, weight="white"),
+                               epstype=epstype
+                            )
+                
                 # --> Ratios
                 if rtype is not None:
                     _, _, ratio[i, :] = ug.specific_ratio(freq_rln, rtype=rtype)
+
                 # --> Large separation
                 if include_dnu:
                     dnu[i] = ug.dnu0(freq_rln, nu_max=nu_max, weight="white")
-                # --> Epsilon differences
-                if epstype is not None:
-                    delta_nu[i] = ug.dnu0(freq_rln, nu_max=nu_max, weight="white")
-                    _, _, _, epsilon[i, :] = ug.specific_eps(freq_rln, delta_nu[i], epstype=epstype)    
 
+                # --> Glitches
+                dif2_rln = sd(freq_rln, num_of_n, num_of_dif2)            
+                param[i, :], chi2[i], reg[i], ier[i] = fit_sd(
+                     dif2_rln, 
+                     icov, 
+                     acousticRadius, 
+                     tauhe, 
+                     dtauhe, 
+                     taucz, 
+                     dtaucz, 
+                     npoly_sd=npoly_params,
+                     total_num_of_param_sd=nparams,
+                     nderiv_sd=nderiv,
+                     tol_grad_sd=tol_grad,
+                     regu_param_sd=regu_param, 
+                     num_guess=n_guess
+                ) 
+                
     else:
         raise ValueError ("Unrecognized fitting method %s!" %(method))
 
