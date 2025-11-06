@@ -36,7 +36,7 @@ def main():
     
         # Print header
         print (88 * "=")
-        ug.prt_center("FREQUENCY RATIOS AND GLITCH PROPERTIES", 88)
+        ug.prt_center("FREQUENCY RATIOS / EPSILON DIFFERENCES AND GLITCH PROPERTIES", 88)
         print ()
         ug.prt_center("The GlitchPy code", 88)
         ug.prt_center("https://github.com/kuldeepv89/GlitchPy", 88)
@@ -53,7 +53,8 @@ def main():
     
     
         # Load observed oscillation frequencies
-        freqfile = os.path.join(path, star + '.txt')
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        freqfile = os.path.join(script_dir, 'example', star + '.txt')
         if not os.path.isfile(freqfile):
             raise FileNotFoundError("Input frequency file not found %s!" %(freqfile))
         freq, num_of_mode, num_of_n = ug.loadFreq(freqfile, num_of_l)
@@ -296,49 +297,49 @@ def main():
         )
         
         # Combine ratios, eps, He glitch properties and large separation into a single variable
-        grparams = np.zeros((nfit_rln, 3))
-        grparams[:, 0] = Ahe_rln[:]
-        grparams[:, 1] = param_rln[:, -3]
-        grparams[:, 2] = param_rln[:, -2]
+        params = np.zeros((nfit_rln, 3))
+        params[:, 0] = Ahe_rln[:]
+        params[:, 1] = param_rln[:, -3]
+        params[:, 2] = param_rln[:, -2]
         if rtype is not None:
-            grparams = np.hstack((ratio_rln, grparams))
+            params = np.hstack((ratio_rln, params))
         if epstype is not None:
-            grparams = np.hstack((eps_rln, grparams)) 
+            params = np.hstack((eps_rln, params)) 
         if include_dnu: 
-            grparams = np.hstack((dnu_rln.reshape(nfit_rln, 1), grparams))
+            params = np.hstack((dnu_rln.reshape(nfit_rln, 1), params))
        
         # Compute the median values
-        ngr = grparams.shape[1]
-        gr = np.zeros(ngr)
-        gr[-3], gr[-2], gr[-1] = Ahe["value"], Dhe["value"], The["value"] 
+        nger = params.shape[1]
+        ger = np.zeros(nger)
+        ger[-3], ger[-2], ger[-1] = Ahe["value"], Dhe["value"], The["value"] 
         if rtype is not None:
             norder, frq, rto = ug.specific_ratio(freq, rtype=rtype)
-            for i in range(ngr-3):
-                gr[i] = np.median(grparams[:, i])   
+            for i in range(nger-3):
+                ger[i] = np.median(params[:, i])   
         if epstype is not None:
             norder, ldegree, frq, ep = ug.specific_eps(
                 freq,
                 ug.dnu0(freq, nu_max=nu_max[s], weight="white"),
                 epstype=epstype
             )
-            for i in range(ngr-3):
-                gr[i] = np.median(grparams[:, i])
+            for i in range(nger-3):
+                ger[i] = np.median(params[:, i])
         else:
             if include_dnu:
-                gr[0] = np.median(grparams[:, 0])
+                ger[0] = np.median(params[:, 0])
              
         # Compute the covariance matrix
         j = int(round(nfit_rln / 2))
-        covtmp = MinCovDet().fit(grparams[0:j, :]).covariance_
-        gr_cov = MinCovDet().fit(grparams).covariance_
+        covtmp = MinCovDet().fit(params[0:j, :]).covariance_
+        ger_cov = MinCovDet().fit(params).covariance_
 
         # Test convergence (change in standard deviations below a relative 
         #    tolerance)
         rdif = np.amax(
             np.abs(
                 np.divide(
-                    np.sqrt(np.diag(covtmp)) - np.sqrt(np.diag(gr_cov)), 
-                    np.sqrt(np.diag(gr_cov))
+                    np.sqrt(np.diag(covtmp)) - np.sqrt(np.diag(ger_cov)), 
+                    np.sqrt(np.diag(ger_cov))
                 )
             )
         )
@@ -354,60 +355,60 @@ def main():
         if include_dnu:
             print (
                 "    - dnu, err: (%.2f, %.2f)" 
-                %(gr[0], np.sqrt(gr_cov[0, 0]))
+                %(ger[0], np.sqrt(ger_cov[0, 0]))
             )
             if rtype is not None:
-                for i in range(ngr-4):
+                for i in range(nger-4):
                     print (
                         "    - n, freq, median ratio, err: (%d, %.2f, %.5f, %.5f)" 
                         %(
-                            int(round(norder[i])), frq[i], gr[i+1], 
-                            np.sqrt(gr_cov[i+1, i+1])
+                            int(round(norder[i])), frq[i], ger[i+1], 
+                            np.sqrt(ger_cov[i+1, i+1])
                         )
                     )
             if epstype is not None:
-                for i in range(ngr-4):
+                for i in range(nger-4):
                     print (
                         "    - n, l, freq, median epsilon, err: (%d, %d, %.2f, %.5f, %.5f)" 
                         %(
-                            norder[i], ldegree[i], frq[i], gr[i+1], 
-                            np.sqrt(gr_cov[i+1, i+1])
+                            norder[i], ldegree[i], frq[i], ger[i+1], 
+                            np.sqrt(ger_cov[i+1, i+1])
                         )
                     )
         else:
             if rtype is not None:
-                for i in range(ngr-3):
+                for i in range(nger-3):
                     print (
                         "    - n, freq, median ratio, err: (%d, %.2f, %.5f, %.5f)" 
                         %(
-                            int(round(norder[i])), frq[i], gr[i], 
-                            np.sqrt(gr_cov[i, i])
+                            int(round(norder[i])), frq[i], ger[i], 
+                            np.sqrt(ger_cov[i, i])
                         )
                     )
             if epstype is not None:
-                for i in range(ngr-3):
+                for i in range(nger-3):
                     print (
                         "    - n, l, freq, median epsilon, err: (%d, %d, %.2f, %.5f, %.5f)" 
                         %(
-                            norder[i], ldegree[i], frq[i], gr[i], 
-                            np.sqrt(gr_cov[i, i])
+                            norder[i], ldegree[i], frq[i], ger[i], 
+                            np.sqrt(ger_cov[i, i])
                         )
                     )
         print (
             "    - median Ahe, err: (%.4f, %.4f)" 
-            %(gr[ngr-3], np.sqrt(gr_cov[ngr-3, ngr-3]))
+            %(ger[nger-3], np.sqrt(ger_cov[nger-3, nger-3]))
         )
         print (
             "    - median Dhe, err: (%.3f, %.3f)" 
-            %(gr[ngr-2], np.sqrt(gr_cov[ngr-2, ngr-2]))
+            %(ger[nger-2], np.sqrt(ger_cov[nger-2, nger-2]))
         )
         print (
             "    - median The, err: (%.2f, %.2f)" 
-            %(gr[ngr-1], np.sqrt(gr_cov[ngr-1, ngr-1]))
+            %(ger[nger-1], np.sqrt(ger_cov[nger-1, nger-1]))
         )
 
         # Plot the correlation matrix
-        plots.correlations(gr_cov, outputdir)
+        plots.correlations(ger_cov, outputdir)
     
         # Write the results to HDF5 file
         outfile = os.path.join(outputdir, "results.hdf5")  
@@ -461,8 +462,8 @@ def main():
                 ff.create_dataset('eps/ldegree', data=ldegree)
                 ff.create_dataset('eps/frq', data=frq)    
         
-            ff.create_dataset('cov/params', data=gr)
-            ff.create_dataset('cov/cov', data=gr_cov)
+            ff.create_dataset('cov/params', data=ger)
+            ff.create_dataset('cov/cov', data=ger_cov)
 
         # Print completion time 
         t1 = time.localtime()

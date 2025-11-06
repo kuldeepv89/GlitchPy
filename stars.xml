@@ -5,7 +5,7 @@
 		<path value = "example"/>
 		<num_of_l value = "3"/>
 		<type value = "e012"/>
-		<include_dnu value = "True"/>
+		<include_dnu value = "False"/>
 	</frequency>
 	<numerical>	
 		<method value = "FQ"/>
@@ -14,7 +14,7 @@
 		<regu_param value = "2"/>
 		<tol_grad value = "0.001"/>
 		<n_guess value = "200"/>
-		<n_rln value = "100"/>
+		<n_rln value = "10000"/>
 	</numerical>
 	<physical>	
 		<star starid = "16CygA">

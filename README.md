@@ -6,7 +6,7 @@ The details can be found in Verma et al. (2019) [https://ui.adsabs.harvard.edu/a
 
 
 ## Installation and Setup
-
+The installation code below is setup to install the `GlitchPy` package in home directory. Some paths would be have to revised in the installation process if installed in some other directory.
 The code can be downloaded using the following commands,
 
        git clone https://github.com/kuldeepv89/GlitchPy.git
@@ -14,7 +14,43 @@ or,
 
        git clone git@github.com:kuldeepv89/GlitchPy.git
 
-It requires standard python packages including `numpy` (version 1.21.4 or later), `scipy` (version 1.7.3 or later), `h5py` (version 3.6.0 or later) and `sklearn`/`scikit-learn` (version 0.21.3 or later). 
+Set up a new virtual environment and activate it using the following commands,
+
+       cd GlitchPy       
+       python3 -m venv glhenv
+       source glhenv/bin/activate
+
+Install dependencies by running the following command, 
+
+       pip install -e .
+
+Compile the fortran programs using the following commands,
+
+       f2py -c glitch_fq.f95 -m glitch_fq
+       f2py -c glitch_sd.f95 -m glitch_sd
+       f2py -c sd.f95 -m sd
+       f2py -c icov_sd.f95 -m icov_sd
+       deactivate
+
+Add the python path to the virtual environment using the following command,
+       
+       vi glhenv/bin/activate
+       export PYTHONPATH=~/GlitchPy:$PYTHONPATH
+
+The installation is complete. 
+
+
+## Running the Code
+
+Copy `stars.xml` from `GlitchPy` folder to a work directory, say `glhWork`, and edit it suitably (see below for the definition of the control parameters). Activate the virtual environment and run the code using the following commands (runtime about one hour).
+
+       mkdir ~/glhWork
+       cp ~/GlitchPy/stars.xml ~/glhWork
+       cd ~/glhWork
+       source ~/GlitchPy/glhenv/bin/activate
+       GlitchPyrun stars.xml 
+
+Note. Running the code for the first time will produce some warnings due to the conversion of Fortran codes to Python modules. The warnings may be ignored (they will not show up from second run onward). It is recommended to run the code from the parent directory when running for the first time. Subsequent runs could be done from any directory having the `stars.xml` file.
 
 
 ## Input data
@@ -94,11 +130,3 @@ In the `stars.xml` file, the input parameters can be set appropriately. The para
 <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; upper frequency limit in the amplitude averaging (muHz) <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if `vmax = None`, use the largest frequency as `vmax`
  
 Note. While analysing multiple stars, the `star` group is repeated with appropriate values of `starid` and other parameters in this group.
-
-## Running the Code
-
-After setting up the `stars.xml` file suitably, run the following command in the `GlitchPy` directory (runtime about one hour).
-  
-       python3 main.py
-
-Note. Running the code for the first time will produce some warnings due to the conversion of Fortran codes to Python modules. The warnings may be ignored (they will not show up from second run onward).

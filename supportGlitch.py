@@ -17,7 +17,7 @@ except ModuleNotFoundError:
     print("Running the code for the first time! Compile all the external modules...")
 
     # Module glitch_fq
-    print("Compiling external glitch_fq module...")
+    print("Compiling external glitch_fq module...") 
     try:
         call(
             [

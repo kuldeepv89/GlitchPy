@@ -26,11 +26,11 @@ def read_xml():
     for j in root.iter('num_of_l'):
         num_of_l = int(j.attrib['value'])
 
-    for j in root.iter('type'):
+    for j in root.iter('type'): 
         if j.attrib['value'] == 'None':
             rtype = None
             epstype = None
-        if j.attrib['value'] in ['e01', 'e02', 'e012']:
+        elif j.attrib['value'] in ['e01', 'e02', 'e012']:
             epstype = j.attrib['value']
             rtype = None
         elif j.attrib['value'] in ['r010', 'r02', 'r01', 'r10', 'r012', 'r102']:
