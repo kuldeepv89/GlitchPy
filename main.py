@@ -297,25 +297,25 @@ def main():
         )
         
         # Combine ratios, eps, He glitch properties and large separation into a single variable
-        params = np.zeros((nfit_rln, 3))
-        params[:, 0] = Ahe_rln[:]
-        params[:, 1] = param_rln[:, -3]
-        params[:, 2] = param_rln[:, -2]
+        ger_params = np.zeros((nfit_rln, 3))
+        ger_params[:, 0] = Ahe_rln[:]
+        ger_params[:, 1] = param_rln[:, -3]
+        ger_params[:, 2] = param_rln[:, -2]
         if rtype is not None:
-            params = np.hstack((ratio_rln, params))
+            ger_params = np.hstack((ratio_rln, ger_params))
         if epstype is not None:
-            params = np.hstack((eps_rln, params)) 
+            ger_params = np.hstack((eps_rln, ger_params)) 
         if include_dnu: 
-            params = np.hstack((dnu_rln.reshape(nfit_rln, 1), params))
+            ger_params = np.hstack((dnu_rln.reshape(nfit_rln, 1), ger_params))
        
         # Compute the median values
-        nger = params.shape[1]
+        nger = ger_params.shape[1]
         ger = np.zeros(nger)
         ger[-3], ger[-2], ger[-1] = Ahe["value"], Dhe["value"], The["value"] 
         if rtype is not None:
             norder, frq, rto = ug.specific_ratio(freq, rtype=rtype)
             for i in range(nger-3):
-                ger[i] = np.median(params[:, i])   
+                ger[i] = np.median(ger_params[:, i])   
         if epstype is not None:
             norder, ldegree, frq, ep = ug.specific_eps(
                 freq,
@@ -323,15 +323,15 @@ def main():
                 epstype=epstype
             )
             for i in range(nger-3):
-                ger[i] = np.median(params[:, i])
+                ger[i] = np.median(ger_params[:, i])
         else:
             if include_dnu:
-                ger[0] = np.median(params[:, 0])
+                ger[0] = np.median(ger_params[:, 0])
              
         # Compute the covariance matrix
         j = int(round(nfit_rln / 2))
-        covtmp = MinCovDet().fit(params[0:j, :]).covariance_
-        ger_cov = MinCovDet().fit(params).covariance_
+        covtmp = MinCovDet().fit(ger_params[0:j, :]).covariance_
+        ger_cov = MinCovDet().fit(ger_params).covariance_
 
         # Test convergence (change in standard deviations below a relative 
         #    tolerance)
