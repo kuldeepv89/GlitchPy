@@ -1,4 +1,6 @@
 __pycache__/
+GlitchPy.egg-info/
+glhenv/
 
 *.so
 *.dSYM

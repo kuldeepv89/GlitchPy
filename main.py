@@ -53,8 +53,7 @@ def main():
     
     
         # Load observed oscillation frequencies
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        freqfile = os.path.join(script_dir, 'example', star + '.txt')
+        freqfile = os.path.join(path, star + '.txt')
         if not os.path.isfile(freqfile):
             raise FileNotFoundError("Input frequency file not found %s!" %(freqfile))
         freq, num_of_mode, num_of_n = ug.loadFreq(freqfile, num_of_l)
