@@ -4,8 +4,8 @@
 	<frequency>	
 		<path value = "example"/>
 		<num_of_l value = "3"/>
-		<type value = "e012"/>
-		<include_dnu value = "False"/>
+		<type value = "r012"/>
+		<include_dnu value = "True"/>
 	</frequency>
 	<numerical>	
 		<method value = "FQ"/>
@@ -22,6 +22,8 @@
 			<nu_max value = "2188.5"/>
 			<tauhe value = "None"/>
 			<dtauhe value = "None"/>
+			<tauhe_min value = "None"/>
+			<tauhe_max value = "None"/>
 			<taucz value = "None"/>
 			<dtaucz value = "None"/>
 			<taucz_min value = "None"/>

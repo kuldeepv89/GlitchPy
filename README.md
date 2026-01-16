@@ -111,6 +111,12 @@ In the `stars.xml` file, the input parameters can be set appropriately. The para
 `dtauhe : float` 
 <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; guess for the error in `tauhe` (s) <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if `dtauhe = None`, `dtauhe = 0.05 * acousticRadius` <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; search for the global minimum in the range `[tauhe - dtauhe, tauhe + dtauhe]`
 
+`tauhe_min : float` 
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; discard realisations with fitted `tauhe` below `tauhe_min` (s) <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if `tauhe_min = None`, `tauhe_min = 0.`
+
+`tauhe_max : float` 
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; discard realisations with fitted `tauhe` above `tauhe_max` (s) <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if `tauhe_max = None`, `tauhe_max = acousticRadius`
+
 `taucz : float` 
 <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; initial guess for the acoustic depth of the BCZ glitch (s) <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if `taucz = None`, `taucz = 0.34 * acousticRadius + 929`
 

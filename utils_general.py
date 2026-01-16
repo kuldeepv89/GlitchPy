@@ -101,6 +101,20 @@ def read_xml():
         else:
             dtauhe.append(float(j.attrib['value']))
 
+    tauhe_min = []
+    for j in root.iter('tauhe_min'):
+        if j.attrib['value'] == 'None':
+            tauhe_min.append(None)
+        else:
+            tauhe_min.append(float(j.attrib['value']))
+
+    tauhe_max = []
+    for j in root.iter('tauhe_max'):
+        if j.attrib['value'] == 'None':
+            tauhe_max.append(None)
+        else:
+            tauhe_max.append(float(j.attrib['value']))
+
     taucz = []
     for j in root.iter('taucz'):
         if j.attrib['value'] == 'None':
@@ -146,8 +160,8 @@ def read_xml():
     return (
             path, num_of_l, rtype, epstype, include_dnu,
             method, n_rln, npoly_params, nderiv, regu_param, tol_grad, n_guess, 
-            stars, delta_nu, nu_max, tauhe, dtauhe, taucz, dtaucz, 
-            taucz_min, taucz_max, vmin, vmax
+            stars, delta_nu, nu_max, tauhe, dtauhe, tauhe_min, tauhe_max, 
+            taucz, dtaucz, taucz_min, taucz_max, vmin, vmax
     )
 
 

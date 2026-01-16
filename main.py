@@ -19,8 +19,8 @@ def main():
     (
             path, num_of_l, rtype, epstype, include_dnu, 
             method, n_rln, npoly_params, nderiv, regu_param, tol_grad, n_guess, 
-            stars, delta_nu, nu_max, tauhe, dtauhe, taucz, dtaucz, 
-            taucz_min, taucz_max, vmin, vmax
+            stars, delta_nu, nu_max, tauhe, dtauhe, tauhe_min, tauhe_max, 
+            taucz, dtaucz, taucz_min, taucz_max, vmin, vmax
     ) = ug.read_xml()
 
 
@@ -110,6 +110,7 @@ def main():
         print ("\nMiscellaneous information:")
         print ("    - number of realizations: %d" %(n_rln))
         print ("    - tauhe, dtauhe: ({0}, {1})".format(tauhe[s], dtauhe[s]))
+        print ("    - tauhe_min, tauhe_max: ({0}, {1})".format(tauhe_min[s], tauhe_max[s]))
         print ("    - taucz, dtaucz: ({0}, {1})".format(taucz[s], dtaucz[s]))
         print ("    - taucz_min, taucz_max: ({0}, {1})".format(taucz_min[s], taucz_max[s]))
         if rtype is not None:
@@ -154,10 +155,11 @@ def main():
         elif method.lower() == "sd":
             dof = freqDif2.shape[0] - param.shape[1]
         if dof <= 0:
-            print ("\nWARNING: Degree of freedom %d <= 0! Setting it to 1...\n" %(dof))
+            print (
+                "\nWARNING: Degree of freedom %d <= 0! Setting it to 1...\n" %(dof)
+            )
             dof = 1
         rchi2 = chi2[-1] / dof
-        print ("    - total and reduced chi-squares: (%.4f, %.4f)" %(chi2[-1], rchi2))
 
         # Produce plots to visualize the fit
         plotdata = {}
@@ -165,6 +167,8 @@ def main():
         plotdata["npoly_params"] = npoly_params
         plotdata["tauhe"] = tauhe[s]
         plotdata["dtauhe"] = dtauhe[s]
+        plotdata["tauhe_min"] = tauhe_min[s]
+        plotdata["tauhe_max"] = tauhe_max[s]
         plotdata["taucz"] = taucz[s]
         plotdata["dtaucz"] = dtaucz[s]
         plotdata["taucz_min"] = taucz_min[s]
@@ -183,36 +187,52 @@ def main():
         param_rln = param_rln[ier_rln == 0, :]
         nfit_rln = param_rln.shape[0]
 
-        # Apply taucz mask if taucz_min != None and/or taucz_max != None
-        if taucz_min[s] is not None:
-            mask1 = param_rln[:, -6] > taucz_min[s]
+        # Apply tauhe mask if tauhe_min != None and/or tauhe_max != None
+        if tauhe_min[s] is not None:
+            mask1 = param_rln[:, -2] > tauhe_min[s]
         else:
             mask1 = np.ones(nfit_rln, dtype=bool)
-        if taucz_max[s] is not None:
-            mask2 = param_rln[:, -6] < taucz_max[s]
+        if tauhe_max[s] is not None:
+            mask2 = param_rln[:, -2] < tauhe_max[s]
         else:
             mask2 = np.ones(nfit_rln, dtype=bool)
-        mask = np.logical_and(mask1, mask2)
-        param_rln = param_rln[mask, :]
+        mask3 = np.logical_and(mask1, mask2)
+        param_rln = param_rln[mask3, :]
+        nfit_rln = param_rln.shape[0]
+
+        # Apply taucz mask if taucz_min != None and/or taucz_max != None
+        if taucz_min[s] is not None:
+            mask4 = param_rln[:, -6] > taucz_min[s]
+        else:
+            mask4 = np.ones(nfit_rln, dtype=bool)
+        if taucz_max[s] is not None:
+            mask5 = param_rln[:, -6] < taucz_max[s]
+        else:
+            mask5 = np.ones(nfit_rln, dtype=bool)
+        mask6 = np.logical_and(mask4, mask5)
+        param_rln = param_rln[mask6, :]
         nfit_rln = param_rln.shape[0]
 
         # Extract ratios, if relevant
         if rtype is not None:
             ratio_rln = ratio[0:n_rln, :]
             ratio_rln = ratio_rln[ier_rln == 0, :]
-            ratio_rln = ratio_rln[mask, :]
+            ratio_rln = ratio_rln[mask3, :]
+            ratio_rln = ratio_rln[mask6, :]
 
         # Extract large frequency separation, if relevant
         if include_dnu:
             dnu_rln = dnu[0:n_rln]
             dnu_rln = dnu_rln[ier_rln == 0]
-            dnu_rln = dnu_rln[mask]
+            dnu_rln = dnu_rln[mask3]
+            dnu_rln = dnu_rln[mask6]
 
         # Extract epsilon differences, if relevant
         if epstype is not None:
             eps_rln = eps[0:n_rln, :]
             eps_rln = eps_rln[ier_rln == 0, :]
-            eps_rln = eps_rln[mask, :]            
+            eps_rln = eps_rln[mask3, :]            
+            eps_rln = eps_rln[mask6, :]            
 
         # Compute average amplitudes of the He and CZ signatures
         Acz_rln, Ahe_rln = np.zeros(nfit_rln), np.zeros(nfit_rln)
@@ -238,10 +258,13 @@ def main():
         nfit_rln = param_rln.shape[0]
         if n_rln != nfit_rln:
             print (
-                "WARNING: Fits failed (or had zero <Ahe> or inappropriate Tcz)"
+                "WARNING: Fits failed (or had zero <Ahe> or inappropriate The/Tcz)"
                 " for realizations: %d/%d" %(n_rln - nfit_rln, n_rln)
             )
-    
+
+        # Print chi-square    
+        print ("    - total and reduced chi-squares: (%.4f, %.4f)" %(chi2[-1], rchi2))
+
         # Print median values and associated negative and positive errorbars of the CZ
         # signature (average amplitude, acoustic depth and phase)
         Acz = {"unit": "muHz"}
@@ -422,6 +445,10 @@ def main():
                 ff.create_dataset('header/tauhe', data=tauhe[s])
             if dtauhe[s] is not None:
                 ff.create_dataset('header/dtauhe', data=dtauhe[s])
+            if tauhe_min[s] is not None:
+                ff.create_dataset('header/tauhe_min', data=tauhe_min[s])
+            if tauhe_max[s] is not None:
+                ff.create_dataset('header/tauhe_max', data=tauhe_max[s])
             if taucz[s] is not None:
                 ff.create_dataset('header/taucz', data=taucz[s])
             if dtaucz[s] is not None:

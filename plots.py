@@ -33,6 +33,8 @@ def fit_summary(plotdata, outputdir):
     npoly_params = plotdata["npoly_params"] 
     tauhe = plotdata["tauhe"] 
     dtauhe = plotdata["dtauhe"] 
+    tauhe_min = plotdata["tauhe_min"]
+    tauhe_max = plotdata["tauhe_max"]
     taucz = plotdata["taucz"] 
     dtaucz = plotdata["dtaucz"] 
     taucz_min = plotdata["taucz_min"]
@@ -63,6 +65,10 @@ def fit_summary(plotdata, outputdir):
         tauhe = 0.17 * acousticRadius + 18.
     if dtauhe is None:
         dtauhe = 0.05 * acousticRadius
+    if tauhe_min is None:
+        tauhe_min = 0.
+    if tauhe_max is None:
+        tauhe_max = acousticRadius
     if taucz is None:
         taucz = 0.34 * acousticRadius + 929.
     if dtaucz is None:
@@ -281,6 +287,8 @@ def fit_summary(plotdata, outputdir):
     ymin, ymax = ax3.get_ylim()
     ax3.plot((tauhe - dtauhe, tauhe + dtauhe), (ymax, ymax), 'k-', lw=0.5)
     ax3.axvline(x=param[-1, -2], ls="-", color="k", lw=1)
+    ax3.axvline(x=tauhe_min, ls="dotted", color="k", lw=1)
+    ax3.axvline(x=tauhe_max, ls="dotted", color="k", lw=1)
     
     ax3.set_xlabel(r'$\tau_{\rm He}$ ({\rm s})', fontsize=11, labelpad=1)
     ax3.set_ylabel(r'Frequency', fontsize=11, labelpad=1)
