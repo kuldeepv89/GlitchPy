@@ -262,6 +262,10 @@ def main():
                 " for realizations: %d/%d" %(n_rln - nfit_rln, n_rln)
             )
 
+        # Calculate height
+        Hhe_rln = param_rln[:, -4] / param_rln[:, -3]
+        Hhe_rln *= (5e5 / delta_nu[s]) / np.sqrt(2. * np.pi**3)
+
         # Print chi-square    
         print ("    - total and reduced chi-squares: (%.4f, %.4f)" %(chi2[-1], rchi2))
 
@@ -316,6 +320,13 @@ def main():
         print (
             "    - median Phe, nerr, perr: (%.4f, %.4f, %.4f)" 
             %(Phe["value"], Phe["nerr"], Phe["perr"])
+        )
+
+        Hhe = {"unit": "dimesionless"}
+        Hhe["value"], Hhe["nerr"], Hhe["perr"] = ug.medianAndErrors(Hhe_rln)
+        print (
+            "    - median Hhe, nerr, perr: (%.4f, %.4f, %.4f)" 
+            %(Hhe["value"], Hhe["nerr"], Hhe["perr"])
         )
         
         # Combine ratios, eps, He glitch properties and large separation into a single variable
