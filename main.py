@@ -262,8 +262,8 @@ def main():
         if epstype is not None:
             eps_rln = eps_rln[Aahe_rln>1e-08, :]
         Aacz_rln = Aacz_rln[Aahe_rln>1e-08]
-        Aahe_rln = Aahe_rln[Aahe_rln>1e-08]
         Hhe_rln = Hhe_rln[Aahe_rln>1e-08]
+        Aahe_rln = Aahe_rln[Aahe_rln>1e-08]
         nfit_rln = param_rln.shape[0]
         if n_rln != nfit_rln:
             print (
