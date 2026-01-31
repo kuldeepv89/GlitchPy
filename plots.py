@@ -42,6 +42,7 @@ def fit_summary(plotdata, outputdir):
     freq = plotdata["freq"] 
     num_of_n = plotdata["num_of_n"] 
     delta_nu = plotdata["delta_nu"] 
+    acousticRadius = 5.e5 / delta_nu
     vmin = plotdata["vmin"] 
     vmax = plotdata["vmax"] 
     freqDif2 = plotdata["freqDif2"] 
@@ -52,15 +53,18 @@ def fit_summary(plotdata, outputdir):
     n_rln = param.shape[0] - 1
 
     # Average amplitudes
-    Ahe = np.zeros(n_rln+1)
-    Acz = np.zeros(n_rln+1)
+    Aahe = np.zeros(n_rln+1)
+    Aacz = np.zeros(n_rln+1)
+    Hhe = np.zeros(n_rln+1)
     for i in range(n_rln+1):
-        Acz[i], Ahe[i] = sg.averageAmplitudes(
+        Aacz[i], Aahe[i] = sg.averageAmplitudes(
             param[i, :], vmin, vmax, delta_nu=delta_nu, method=method
+        )
+        Hhe[i] = sg.gamma1Height(
+            param[i, :], acousticRadius, method=method
         )
 
     # Initial guesses for various acoustic depths 
-    acousticRadius = 5.e5 / delta_nu
     if tauhe is None:
         tauhe = 0.17 * acousticRadius + 18.
     if dtauhe is None:
@@ -211,12 +215,12 @@ def fit_summary(plotdata, outputdir):
     ax1 = fig.add_subplot(221)
     ax1.set_rasterization_zorder(-1)
     
-    med_Ahe, AheNErr, AhePErr = ug.medianAndErrors(Ahe[0:n_rln])
-    xmin = max(0., med_Ahe - 10. * AheNErr)
-    xmax = med_Ahe + 10. * AhePErr 
+    med_Aahe, AaheNErr, AahePErr = ug.medianAndErrors(Aahe[0:n_rln])
+    xmin = max(0., med_Aahe - 10. * AaheNErr)
+    xmax = med_Aahe + 10. * AahePErr 
 
-    ax1.hist(Ahe[0:n_rln], bins=np.linspace(xmin, xmax, 50), color=colorList[0])
-    ax1.axvline(x=Ahe[-1], ls="-", color='k', lw=1)
+    ax1.hist(Aahe[0:n_rln], bins=np.linspace(xmin, xmax, 50), color=colorList[0])
+    ax1.axvline(x=Aahe[-1], ls="-", color='k', lw=1)
 
     ax1.set_xlabel(
         r'$\langle A_{\rm He} \rangle \ (\mu {\rm Hz})$', fontsize=11, labelpad=1
@@ -347,6 +351,83 @@ def fit_summary(plotdata, outputdir):
     plt.close(fig)
 
 
+    # Plot showing distributions of the He amplitude and Gamma_1 height
+    #------------------------------------------------------------------
+    fig = plt.figure()
+    sns.set(rc={'text.usetex' : True})
+    sns.set_style("ticks")
+    fig.subplots_adjust(bottom=0.20, right=0.98, top=0.90, left=0.12, wspace=0.30)
+
+    # Amplitude 
+    ax1 = fig.add_subplot(121)
+    ax1.set_rasterization_zorder(-1)
+    
+    Ahe, AheNErr, AhePErr = ug.medianAndErrors(param[0:n_rln, -4])
+    xmin = max(0., Ahe - 10. * AheNErr)
+    xmax = Ahe + 10. * AhePErr 
+
+    ax1.hist(param[0:n_rln, -4], bins=np.linspace(xmin, xmax, 50), color=colorList[0])
+    ax1.axvline(x=param[-1, -4], ls="-", color='k', lw=1)
+
+    ax1.set_xlabel(r'$A_{\rm He}$', fontsize=14, labelpad=2)
+    ax1.set_ylabel(r'Frequency', fontsize=14, labelpad=2)
+    ax1.tick_params(axis='y', labelsize=11, which='both', direction='inout', pad=2)
+    ax1.tick_params(axis='x', labelsize=11, which='both', direction='inout', pad=2)
+
+    xmajor, xminor = ug.majMinTick(xmin, xmax, nxmajor=5, nxminor=5)
+    ax1.set_xlim(left=xmin, right=xmax)
+    minLoc = MultipleLocator(xminor)
+    ax1.xaxis.set_minor_locator(minLoc)
+    majLoc = MultipleLocator(xmajor)
+    ax1.xaxis.set_major_locator(majLoc)
+    ax1.xaxis.set_major_formatter(FormatStrFormatter('%.3f'))
+
+    ymin, ymax = ax1.get_ylim()
+    ymajor, yminor = ug.majMinTick(ymin, ymax, nxmajor=7, nxminor=5)
+    ax1.set_ylim(bottom=ymin, top=ymax)
+    minLoc = MultipleLocator(yminor)
+    ax1.yaxis.set_minor_locator(minLoc)
+    majLoc = MultipleLocator(ymajor)
+    ax1.yaxis.set_major_locator(majLoc)
+    ax1.yaxis.set_major_formatter(FormatStrFormatter('%d'))
+    
+    # Height
+    ax2 = fig.add_subplot(122)
+    ax2.set_rasterization_zorder(-1)
+    
+    med_Hhe, HheNErr, HhePErr = ug.medianAndErrors(Hhe[0:n_rln])
+    xmin = max(0., med_Hhe - 10. * HheNErr)
+    xmax = min(1.67, med_Hhe + 3. * HhePErr)
+
+    ax2.hist(Hhe[0:n_rln], bins=np.linspace(xmin, xmax, 50), color=colorList[0])
+    ax2.axvline(x=Hhe[-1], ls="-", color='k', lw=1)
+    
+    ax2.set_xlabel(r'$H_{\rm He}$', fontsize=14, labelpad=2)
+    ax2.set_ylabel(r'Frequency', fontsize=14, labelpad=2)
+    ax2.tick_params(axis='y', labelsize=11, which='both', direction='inout', pad=2)
+    ax2.tick_params(axis='x', labelsize=11, which='both', direction='inout', pad=2)
+
+    xmajor, xminor = ug.majMinTick(xmin, xmax, nxmajor=5, nxminor=5)
+    ax2.set_xlim(left=xmin, right=xmax)
+    minLoc = MultipleLocator(xminor)
+    ax2.xaxis.set_minor_locator(minLoc)
+    majLoc = MultipleLocator(xmajor)
+    ax2.xaxis.set_major_locator(majLoc)
+    ax2.xaxis.set_major_formatter(FormatStrFormatter('%0.3f'))
+
+    ymin, ymax = ax2.get_ylim()
+    ymajor, yminor = ug.majMinTick(ymin, ymax, nxmajor=7, nxminor=5)
+    ax2.set_ylim(bottom=ymin, top=ymax)
+    minLoc = MultipleLocator(yminor)
+    ax2.yaxis.set_minor_locator(minLoc)
+    majLoc = MultipleLocator(ymajor)
+    ax2.yaxis.set_major_locator(majLoc)
+    ax2.yaxis.set_major_formatter(FormatStrFormatter('%d'))
+
+    fig.savefig(os.path.join(outputdir, "heightDist.png"), dpi=400, bbox_inches='tight')
+    plt.close(fig)
+
+
     # Plot showing distributions of the BCZ glitch parameters
     #-------------------------------------------------------- 
     fig = plt.figure()
@@ -360,12 +441,12 @@ def fit_summary(plotdata, outputdir):
     ax1 = fig.add_subplot(311)
     ax1.set_rasterization_zorder(-1)
     
-    med_Acz, AczNErr, AczPErr = ug.medianAndErrors(Acz[0:n_rln])
-    xmin = max(0., med_Acz - 10. * AczNErr)
-    xmax = med_Acz + 10. * AczPErr 
+    med_Aacz, AaczNErr, AaczPErr = ug.medianAndErrors(Aacz[0:n_rln])
+    xmin = max(0., med_Aacz - 10. * AaczNErr)
+    xmax = med_Aacz + 10. * AaczPErr 
 
-    ax1.hist(Acz[0:n_rln], bins=np.linspace(xmin, xmax, 100), color=colorList[0])
-    ax1.axvline(x=Acz[-1], ls="-", color='k', lw=1)
+    ax1.hist(Aacz[0:n_rln], bins=np.linspace(xmin, xmax, 100), color=colorList[0])
+    ax1.axvline(x=Aacz[-1], ls="-", color='k', lw=1)
 
     ax1.set_xlabel(
         r'$\langle A_{\rm CZ} \rangle \ (\mu {\rm Hz})$', fontsize=11, labelpad=1

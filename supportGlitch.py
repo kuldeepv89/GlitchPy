@@ -613,9 +613,9 @@ def averageAmplitudes(param, vmin, vmax, delta_nu=None, method='FQ'):
 
     Return
     ------
-    Acz : float
+    Aacz : float
         Average amplitude of CZ signature (muHz)
-    Ahe : float
+    Aahe : float
         Average amplitude of He signature (muHz)
     '''
 #-----------------------------------------------------------------------------------------
@@ -623,12 +623,12 @@ def averageAmplitudes(param, vmin, vmax, delta_nu=None, method='FQ'):
     n0 = len(param) - 7
 
     # Amplitude of CZ signature
-    Acz = param[n0] / (vmin * vmax)
+    Aacz = param[n0] / (vmin * vmax)
 
     # Amplitude of He signature
     vminhz = 1.e-6 * vmin
     vmaxhz = 1.e-6 * vmax
-    Ahe = (param[n0+3] * 
+    Aahe = (param[n0+3] * 
            (np.exp(-8. * np.pi**2 * vminhz**2 * param[n0+4]**2) -
             np.exp(-8. * np.pi**2 * vmaxhz**2 * param[n0+4]**2)) /
            (16. * np.pi**2 * 1.e-12 * (vmax - vmin) * param[n0+4]**2)
@@ -638,7 +638,36 @@ def averageAmplitudes(param, vmin, vmax, delta_nu=None, method='FQ'):
     if method.lower() == 'sd':
         if delta_nu is None:
             raise ValueError("delta_nu cannot be None for SD!")
-        Acz /= (2. * np.sin(2. * np.pi * delta_nu*1.e-6 * param[n0+1]))**2
-        Ahe /= (2. * np.sin(2. * np.pi * delta_nu*1.e-6 * param[n0+5]))**2
+        Aacz /= (2. * np.sin(2. * np.pi * delta_nu*1.e-6 * param[n0+1]))**2
+        Aahe /= (2. * np.sin(2. * np.pi * delta_nu*1.e-6 * param[n0+5]))**2
 
-    return Acz, Ahe
+    return Aacz, Aahe
+
+
+
+#-----------------------------------------------------------------------------------------
+def gamma1Height(param, acousticRadius, method='FQ'):
+    '''
+    Compute height of the Gamma_1 peak
+
+    Parameters
+    ----------
+    param : array
+        Fitted parameters
+    acousticRadius : float
+        Acoustic radius of the star    
+    method : str
+        Fitting method ('FQ' or 'SD')
+
+    Return
+    ------
+    Hhe : float
+        Height of the Gamma_1 peak 
+    '''
+#-----------------------------------------------------------------------------------------
+
+    if method.lower() == 'fq':
+        Hhe = param[-4] / param[-3]
+        Hhe *= acousticRadius / np.sqrt(2. * np.pi**3) 
+
+    return Hhe

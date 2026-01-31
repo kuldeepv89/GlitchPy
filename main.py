@@ -67,6 +67,7 @@ def main():
                 delta_nu[s] = ug.dnu0(freq, nu_max=nu_max[s], weight="none")
             else:
                 delta_nu[s] = ug.dnu0(freq, nu_max=nu_max[s], weight="white")
+        acousticRadius = 5e5/delta_nu[s]
         
         if vmin[s] is None:
             vmin[s] = np.amin(freq[:, 2])
@@ -81,7 +82,7 @@ def main():
         )
         print ("    - large separation: %.2f muHz" %(delta_nu[s]))
         print ("    - frequency of maximum power: {0}".format(nu_max[s]))
-        print ("    - acoustic radius: %d sec" %(5e5/delta_nu[s]))
+        print ("    - acoustic radius: %d sec" %(acousticRadius))
     
         # Compute second differences (if necessary)
         num_of_dif2, freqDif2, icov = None, None, None
@@ -235,26 +236,34 @@ def main():
             eps_rln = eps_rln[mask6, :]            
 
         # Compute average amplitudes of the He and CZ signatures
-        Acz_rln, Ahe_rln = np.zeros(nfit_rln), np.zeros(nfit_rln)
+        # Compute height of the Gamma_1 peak
+        Aacz_rln, Aahe_rln = np.zeros(nfit_rln), np.zeros(nfit_rln)
+        Hhe_rln = np.zeros(nfit_rln)
         for j in range(nfit_rln):
-            Acz_rln[j], Ahe_rln[j] = sg.averageAmplitudes(
+            Aacz_rln[j], Aahe_rln[j] = sg.averageAmplitudes(
                 param_rln[j, :], 
                 vmin[s], 
                 vmax[s], 
                 delta_nu=delta_nu[s], 
                 method=method
             )
+            Hhe_rln[j] = sg.gamma1Height(
+                param_rln[j, :], 
+                acousticRadius, 
+                method=method
+            )
 
         # Extract realizations with non-zero average He amplitude
-        param_rln = param_rln[Ahe_rln>1e-08, :]
+        param_rln = param_rln[Aahe_rln>1e-08, :]
         if rtype is not None:
-            ratio_rln = ratio_rln[Ahe_rln>1e-08, :]
+            ratio_rln = ratio_rln[Aahe_rln>1e-08, :]
         if include_dnu: 
-            dnu_rln = dnu_rln[Ahe_rln>1e-08]
+            dnu_rln = dnu_rln[Aahe_rln>1e-08]
         if epstype is not None:
-            eps_rln = eps_rln[Ahe_rln>1e-08, :]
-        Acz_rln = Acz_rln[Ahe_rln>1e-08]
-        Ahe_rln = Ahe_rln[Ahe_rln>1e-08]
+            eps_rln = eps_rln[Aahe_rln>1e-08, :]
+        Aacz_rln = Aacz_rln[Aahe_rln>1e-08]
+        Aahe_rln = Aahe_rln[Aahe_rln>1e-08]
+        Hhe_rln = Hhe_rln[Aahe_rln>1e-08]
         nfit_rln = param_rln.shape[0]
         if n_rln != nfit_rln:
             print (
@@ -262,20 +271,16 @@ def main():
                 " for realizations: %d/%d" %(n_rln - nfit_rln, n_rln)
             )
 
-        # Calculate height
-        Hhe_rln = param_rln[:, -4] / param_rln[:, -3]
-        Hhe_rln *= (5e5 / delta_nu[s]) / np.sqrt(2. * np.pi**3)
-
         # Print chi-square    
         print ("    - total and reduced chi-squares: (%.4f, %.4f)" %(chi2[-1], rchi2))
 
         # Print median values and associated negative and positive errorbars of the CZ
         # signature (average amplitude, acoustic depth and phase)
-        Acz = {"unit": "muHz"}
-        Acz["value"], Acz["nerr"], Acz["perr"] = ug.medianAndErrors(Acz_rln)
+        Aacz = {"unit": "muHz"}
+        Aacz["value"], Aacz["nerr"], Aacz["perr"] = ug.medianAndErrors(Aacz_rln)
         print (
-            "    - median Acz, nerr, perr: (%.4f, %.4f, %.4f)" 
-            %(Acz["value"], Acz["nerr"], Acz["perr"])
+            "    - median Aacz, nerr, perr: (%.4f, %.4f, %.4f)" 
+            %(Aacz["value"], Aacz["nerr"], Aacz["perr"])
         )
 
         Tcz = {"unit": "sec"}
@@ -294,11 +299,11 @@ def main():
     
         # Print median values and associated negative and positive errorbars of the He
         #     signature (average amplitude, acoustic width, acoustic depth and phase)
-        Ahe = {"unit": "muHz"}
-        Ahe["value"], Ahe["nerr"], Ahe["perr"] = ug.medianAndErrors(Ahe_rln)
+        Aahe = {"unit": "muHz"}
+        Aahe["value"], Aahe["nerr"], Aahe["perr"] = ug.medianAndErrors(Aahe_rln)
         print (
-            "    - median Ahe, nerr, perr: (%.4f, %.4f, %.4f)" 
-            %(Ahe["value"], Ahe["nerr"], Ahe["perr"])
+            "    - median Aahe, nerr, perr: (%.4f, %.4f, %.4f)" 
+            %(Aahe["value"], Aahe["nerr"], Aahe["perr"])
         )
 
         Dhe = {"unit": "sec"}
@@ -331,7 +336,7 @@ def main():
         
         # Combine ratios, eps, He glitch properties and large separation into a single variable
         ger_params = np.zeros((nfit_rln, 3))
-        ger_params[:, 0] = Ahe_rln[:]
+        ger_params[:, 0] = Aahe_rln[:]
         ger_params[:, 1] = param_rln[:, -3]
         ger_params[:, 2] = param_rln[:, -2]
         if rtype is not None:
@@ -344,7 +349,7 @@ def main():
         # Compute the median values
         nger = ger_params.shape[1]
         ger = np.zeros(nger)
-        ger[-3], ger[-2], ger[-1] = Ahe["value"], Dhe["value"], The["value"] 
+        ger[-3], ger[-2], ger[-1] = Aahe["value"], Dhe["value"], The["value"] 
         if rtype is not None:
             norder, frq, rto = ug.specific_ratio(freq, rtype=rtype)
             for i in range(nger-3):
@@ -428,7 +433,7 @@ def main():
                         )
                     )
         print (
-            "    - median Ahe, err: (%.4f, %.4f)" 
+            "    - median Aahe, err: (%.4f, %.4f)" 
             %(ger[nger-3], np.sqrt(ger_cov[nger-3, nger-3]))
         )
         print (
