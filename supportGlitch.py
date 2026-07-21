@@ -668,6 +668,6 @@ def gamma1Height(param, acousticRadius, method='FQ'):
 
     if method.lower() == 'fq':
         Hhe = param[-4] / param[-3]
-        Hhe *= acousticRadius / np.sqrt(2. * np.pi**3) 
+        Hhe *= acousticRadius * np.sqrt(2. / np.pi) 
 
     return Hhe
