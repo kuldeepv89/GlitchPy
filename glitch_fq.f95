@@ -127,7 +127,7 @@
         ! (3) maximum value of derivatives w.r.t. parameters is < 1d-2,
         ! (4) Acoustic width of He ionization zone > 0.1s,
         ! (5) acoustic depths of CZ and He > 0 s,
-        ! (6) acoustic depth of CZ > acoustic depth of He,
+        ! (6) acoustic depth of CZ > acoustic depth of He + 100 s,
         ! (7) acoustic depth of CZ < acoustic radius.
         reg_new = REGU_FQ(par)
         chi2_new = chi2_total_new - reg_new
@@ -136,7 +136,7 @@
             MAXVAL(ABS(grad(:))) .LT. tol_grad_fq .AND. &
             Hhe .LT. 1.67d0 .AND. &
             par(i0+2) .GT. 0.d0 .AND. par(i0+6) .GT. 0.d0 .AND. &
-            par(i0+2) .GT. par(i0+6) .AND. &
+            par(i0+2) .GT. (par(i0+6) + 100.d0) .AND. &
             par(i0+2) .LT. acoustic_radius) THEN
           chi2_total = chi2_total_new
           chi2  = chi2_new
